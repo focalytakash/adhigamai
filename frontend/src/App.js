@@ -1,0 +1,412 @@
+
+import React from 'react';  // This must be first
+import { useState,useEffect } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
+
+import Websocket from './utils/websocket'
+import { WhatsAppProvider } from './contexts/WhatsAppContext';
+
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import HomePage from '../src/Pages/Front/HomePage/HomePage';
+
+// import About from './Pages/Front/About/About';
+import About from './Pages/Front/About/About';
+import Result from "./Pages/Front/Result/Result";
+import Course from './Pages/Front/Courses/Course';
+import Contact from './Pages/Front/Contact/Contact';
+import CourseDetails from './Pages/Front/CourseDetails/CourseDetails';
+import EmployersTermsofService from './Pages/Front/EmpTerms/EmpTerms';
+import UserAgreement from './Pages/Front/UserAgreement/UserAgreement';
+import MyAchievement from './Pages/App/Candidate/Earning/MyAchievement';
+
+
+import "./App.css";
+// import CompanyLogin from './Component/Layouts/App/Company/CompanyLogin';
+
+import CandidateLayout from './Component/Layouts/App/Candidates';
+import CandidateDashboard from './Pages/App/Candidate/Dashboard/CandidateDashboard';
+import CandidateProfile from './Pages/App/Candidate/Profile/CandidateProfile';
+import Resume from './Pages/App/Candidate/Profile/Resume';
+import CandidatesDocuments from "./Pages/App/Candidate/Documents/CandidateDocumets"
+import SearchCourses from "./Pages/App/Candidate/Courses/SearchCourses"
+import AppliedCourses from './Pages/App/Candidate/Courses/AppliedCourses';
+import CandidatesJobs from './Pages/App/Candidate/Jobs/CandidatesJobs';
+import NearbyJobs from './Pages/App/Candidate/Jobs/NearByJobs';
+import CandidateAppliedJobs from './Pages/App/Candidate/Jobs/CandidateAppliesJobs';
+import SearchCourseDetail from "./Pages/App/Candidate/Courses/SearchCourseDetail"
+import CandidateWallet from './Pages/App/Candidate/Wallet/CandidateWallet';
+import CandidateEarning from './Pages/App/Candidate/Earning/CandidateEarning';
+import ReferAndEarn from './Pages/App/Candidate/Earning/ReferAndEarn';
+import CoinsPage from './Pages/App/Candidate/Earning/CoinsPage';
+import LoanApplicationPage from "./Pages/App/Candidate/Earning/LoanApplicationPage";
+import WatchVideosPage from './Pages/App/Candidate/Video/WatchVideosPage';
+import CandidateShare from './Pages/App/Candidate/Share/CandidateShare';
+import CandidateNotification from './Pages/App/Candidate/Notification/CandidateNotification';
+import RegisterForInterview from './Pages/App/Candidate/Jobs/RegisterForInterview';
+import Shortlisting from './Pages/App/Candidate/Jobs/Shortlisting';
+import SocialImpact from './Pages/Front/SocialImpact/SocialImpact';
+import Event from './Pages/Front/Event/Event';
+import AdminLayout from './Component/Layouts/Admin';
+import CandidateLogin from './Pages/App/Candidate/Login/CandidateLogin';
+import CandidateViewJobs from './Pages/App/Candidate/Jobs/CandidateViewJobs';
+import RequiredDocuments from './Pages/App/Candidate/RequiredDocuments/RequiredDocuments';
+import PaymentDetails from './Pages/App/Candidate/PaymentsDetails/PaymentDetails';
+import CandidatesEvents from './Pages/App/Candidate/Events/CandidatesEvents';
+import EnrolledCourses from './Pages/App/Candidate/EnrolledCourses/EnrolledCourses';
+import NewEnrolledCourses from './Pages/App/Candidate/EnrolledCourses/NewEnrolledCourses';
+import Curriculums from './Pages/App/Candidate/EnrolledCourses/Curriculums';
+import Assignments from './Pages/App/Candidate/Assignment/Assignment';
+import JobOffer from './Pages/App/Candidate/JobOffer/jobOffer';
+import CompanyPartners from './Pages/Front/CompanyPartners/CompanyPartners';
+import Regitrationsold from './Pages/App/College/Course/Registrationsold'
+import CollegeLayout from './Component/Layouts/App/College';
+import CollegeLogin from './Pages/App/College/Login/CollegeLogin';
+import CollegeRegister from './Pages/App/College/Register/CollegeRegister';
+import Dashboard from './Pages/App/College/Dashboard/Dashboard';
+import DashboardB2B from './Pages/App/College/B2B/DashboardB2B';
+import B2BFollowUp from './Pages/App/College/B2B/B2BFollowUp';
+import DashboardPlacements from './Pages/App/College/Placements/DashboardPlacements';
+import Placements from './Pages/App/College/Placements/Placements';
+import PlacementFollowUp from './Pages/App/College/Placements/PlacementFollowUp';
+import StatusPlacements from './Pages/App/College/Status/Placements';
+import Profile from './Pages/App/College/Profile/Profile';
+import UploadCandidates from './Pages/App/College/UploadCandidates/UploadCandidates';
+import UploadTemplates from './Pages/App/College/UploadTemplates/UploadTemplates';
+import MyStudents from './Pages/App/College/MyStudents/MyStudents';
+import AvailableJobs from './Pages/App/College/AvailableJobs/AvailableJobs';
+import AppliedEvents from './Pages/App/Candidate/Events/AppliedEvents';
+import CandidateManagementPortal from './Pages/App/College/CandidateManagementPortal/CandidateManagementPortal';
+import CandidateManagementPortal_old from './Pages/App/College/CandidateManagementPortal/CandidateManagementPortal_copy';
+import AddCourse from './Pages/App/College/Course/AddCourse';
+import AddCoursecopy from './Pages/App/College/Course/AddCoursecopy';
+import ViewCourses from './Pages/App/College/Course/ViewCourse';
+import EditCourse from './Pages/App/College/Course/EditCourse';
+import Registrations from './Pages/App/College/Course/Registrations';
+import AdmissionPost from './Pages/App/College/Course/AdmissionPost'; 
+import AccessManagement from './Pages/App/College/Settings/AccessManagement';
+import ClgCourse from './Pages/App/College/Settings/Course';
+import ApprovalManagement from './Pages/App/College/ApprovalManagement/ApprovalManagement';
+import Status from './Pages/App/College/Status/status';
+import PreVerification from './Pages/App/College/PreVerification/PreVerification';
+import AICounsellor from './Pages/App/College/AICounsellor/AICounsellor';
+import MyFollowup from './Pages/App/College/MyFollowupB2C/MyFollowupB2C';
+import MyFollowupB2B from './Pages/App/College/MyFollowupB2B/MyFollowupB2B';
+import AddLeads from './Pages/App/College/Course/AddLeads';
+import TypeB2b from './Pages/App/College/Settings/TypeOfB2B/TypeB2b';
+import B2BProject from './Pages/App/College/Settings/B2BProject/B2BProject';
+import B2BDepartment from './Pages/App/College/Settings/B2BDepartment/B2BDepartment';
+import TypeCategory from './Pages/App/College/Settings/TypeOfCategory/TypeCategory';
+import Target from './Pages/App/College/Target/Target';
+import Lrp from './Pages/App/College/LRP/Lrp';
+import LrpView from './Pages/App/College/LRP/LrpView';
+import VideoTimestamp from './Pages/App/College/VideoTimestamp/VideoTimestamp';
+import AcademicCoordinator from './Pages/App/College/Training/AcademicCoordinatorModule';
+import CompanyLayout from './Component/Layouts/App/Company';
+import CompanyLogin from './Pages/App/Company/CompanyLogin/CompanyLogin';
+import CompanyRegister from './Pages/App/Company/CompanyRegister/CompanyRegister';
+import CompanyDashboard from './Pages/App/Company/CompanyDashboard/CompanyDashboard';
+import CompanyProfile from './Pages/App/Company/CompanyProfile/CompanyProfile';
+import Notification from './Pages/App/Company/Notification/Notification';
+import AllJd from './Pages/App/Company/Jobs/AllJd';
+import OngoingHiring from './Pages/App/Company/Hirings/OnGoingHiring';
+import ShortListedCandidate from './Pages/App/Company/Candidate/ShortListedCandidate';
+import AddJd from './Pages/App/Company/Jobs/AddJd';
+import Coins from './Pages/App/Company/Coins/MyPieCoins';
+import Ranking from './Pages/App/College/Settings/LeadRanking/Ranking';
+
+// import EditJob from './Pages/App/Company/Jobs/editJob';
+import ViewJd from './Pages/App/Company/Jobs/ViewJd';
+import IntCandiate from './Pages/App/Company/Candidate/IntrestedCandidates';
+import ListCandidate from './Pages/App/Company/Candidate/ListCandidate';
+import NearByCandidate from './Pages/App/Company/Candidate/NearByCandidate';
+import Batch from './Component/Layouts/App/College/ProjectManagement/Student';
+import RegistrationCards from './Component/Layouts/App/College/RegistrationCards/RegistrationCards';
+import ResumeTest from './Pages/Front/Resume/Resume';
+import AttendanceManagement from './Component/Layouts/App/College/ProjectManagement/AttendanceManagement';
+import Whatapp from './Pages/App/College/Whatapp/Whatapp';
+import WhatappTemplate from './Pages/App/College/Whatapp/WhatappTemplate';
+import B2BSales from './Pages/App/College/B2B/B2BSales';
+import B2BSalesCopy from './Pages/App/College/B2B/B2BSales_copy';
+import StatusB2C from './Pages/App/College/Status/statusB2C'
+import PrivacyPolicy from './Pages/App/College/Register/privacyPolicy';
+import TermsOfService from './Pages/App/College/Register/termsOfService';
+import Attendance from './Pages/App/College/Attendance/Attendance';
+import CalenderFolowupB2C from './Pages/App/College/Course/CalenderFolowupB2C';
+import Source from './Pages/App/College/Settings/Source/Source';
+import Partners from './Pages/App/College/Settings/Partners/Partners';
+import MisReport from './Pages/App/College/MisReport/MisReport';
+import DripMarketing from './Pages/App/College/DripMarketing/Dripmarketing'
+import ReEnquire from './Pages/App/College/Course/ReEnquire';
+import TrainerManagement from './Pages/App/College/Settings/TrainerManagement/TrainerManagement';
+import WhatsappChat from './Pages/App/College/Whatapp/WhatsappChat';
+import WhatsappWallet from './Pages/App/College/whatsappWallet/WhatsappWallet';
+import EmailTemplate from './Pages/App/College/Email/EmailTemplate';
+import TrainerModule from './Pages/App/College/Course/TrainerModule';
+import AcademicCoordinatorModule from './Pages/App/College/Training/AcademicCoordinatorModule';
+import SeniorTrainerModule from './Pages/App/College/Training/SeniorTrainerModule';
+import Editcoursecopy from './Pages/App/College/Course/EditCoursecopy';
+import Viewcoursecopy from './Pages/App/College/Course/ViewCoursecopy';
+import LeadRanking from './Pages/App/College/Settings/LeadRanking/LeadRanking';
+// Trainer module
+import TrainerLayout from './Component/Layouts/App/Trainer'
+import TrainerLogin from './Pages/App/Trainer/TrainerLogin/TrainerLogin'
+import TrainerHeader from './Component/Layouts/App/Trainer/TrainerHeader/TrainerHeader'
+import TrainerProfile from './Pages/App/Trainer/TrainerProfile/TrainerProfile';
+import MyCourses from './Pages/App/Trainer/CourseManagement/MyCourses';
+import AddCourseContent from './Pages/App/Trainer/CourseManagement/AddCourseContent';
+import StudyMaterial from './Pages/App/Trainer/CourseManagement/StudyMaterial';
+import ViewTrainerCourses from  './Pages/App/Trainer/CourseManagement/ViewCourses';
+import TrainerDashboard from './Pages/App/Trainer/Dashboard/Dashboard';
+import BatchMangement from './Pages/App/Trainer/BatchManagement/BatchMangement';
+import TimeTable from './Pages/App/Trainer/TimeTable/Timetable';
+import LiveClassRoom from './Pages/App/Trainer/LiveClassRoom/LiveClassRoom';
+import Students from './Pages/App/Trainer/Students/Students';
+import DailyDiary from './Pages/App/Trainer/DailyDiary/DailyDiary';
+import Center from './Pages/App/Trainer/Center/Center';
+import Assignment from './Pages/App/Trainer/Assignment/Assignment';
+import CreateAssignment from './Pages/App/Trainer/Assignment/CreateAssignment';
+import StartLiveClass from './Pages/App/Trainer/LiveClass/StartLiveClass';
+const Layout = () => {
+  const location = useLocation();
+  useEffect(() => {
+    const getCookie = (name) => {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      return match ? match[2] : null;
+    };
+  
+    const getFbclid = () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('fbclid');
+    };
+  
+    const fbp = getCookie('_fbp');
+    const fbcCookie = getCookie('_fbc');
+    const fbclid = getFbclid();
+  
+    const fbcGenerated = fbclid ? `fb.1.${Date.now()}.${fbclid}` : null;
+  
+    if (fbp && !sessionStorage.getItem('_fbp')) {
+      sessionStorage.setItem('_fbp', fbp);
+    }
+  
+    if ((fbcCookie || fbcGenerated) && !sessionStorage.getItem('_fbc')) {
+      sessionStorage.setItem('_fbc', fbcCookie || fbcGenerated);
+    }
+  }, []);
+
+  
+
+  return (
+    <>
+      {/* <FrontHeader /> */}
+      <Routes>
+
+        <Route exact path="/" element={<HomePage />} />
+        <Route exact path="/about" element={<About />} />
+        <Route exact path="/company-partners" element={<CompanyPartners />} />
+        {/* <Route exact path="/about_us" element={<About />} /> */}
+        <Route exact path="/results" element={<Result />} />
+        <Route exact path="/courses" element={<Course />} />
+        <Route exact path="/contact" element={<Contact />} />
+        <Route exact path="/coursedetails/:courseId" element={<CourseDetails />} />
+        <Route exact path="/cmp/login" element={<CompanyLogin />} />
+        <Route path="/socialimpact" element={<SocialImpact />} />
+        <Route path="/events" element={<Event />} />
+        <Route path="/Resumetest" element={<ResumeTest/>}/>
+        <Route path="/employersTermsofService" element={<EmployersTermsofService/>}/>
+        <Route path="/userAgreement" element={<UserAgreement/>}/>
+
+        {/* Candidate Parent Route */}
+        <Route path="/candidate/login" element={<CandidateLogin />} />
+        <Route path="/live-class/:id" element={<LiveClassRoom />} />
+        <Route path="/candidate" element={<CandidateLayout />}>
+
+          <Route path="dashboard" element={<CandidateDashboard />} />
+          <Route path="myprofile" element={<CandidateProfile />} />
+          <Route path="document" element={<CandidatesDocuments />} />
+          <Route path="resume" element={<Resume />} />
+          <Route path="searchcourses" element={<SearchCourses />} />
+          <Route path="appliedCourses" element={<AppliedCourses />} />
+          <Route path="searchjob" element={<CandidatesJobs />} />
+          <Route path="nearbyJobs" element={<NearbyJobs />} />
+          <Route path="appliedJobs" element={<CandidateAppliedJobs />} />
+          <Route path="cashback" element={<CandidateWallet />} />
+          <Route path="myEarnings" element={<CandidateEarning />} />
+          <Route path="myAchievement" element={<MyAchievement />} />
+          <Route path="referral" element={<ReferAndEarn />} />
+          <Route path="Coins" element={<CoinsPage />} />
+          <Route path="requestLoan" element={<LoanApplicationPage />} />
+          <Route path="watchVideos" element={<WatchVideosPage />} />
+          <Route path="shareCV" element={<CandidateShare />} />
+          <Route path="notifications" element={<CandidateNotification />} />
+          <Route path="registerInterviewsList" element={<RegisterForInterview />} />
+          <Route path='InterestedCompanies' element={<Shortlisting />} />
+          {/* <Route path="course" element={<CourseDetail/>}/> */}
+          <Route path="course/:courseId" element={<SearchCourseDetail />} />
+          <Route path="job/:JobId" element={<CandidateViewJobs />} />
+          <Route path="reqDocs/:courseId" element={<RequiredDocuments />} />
+          <Route path="pendingFee" element={<PaymentDetails />} />
+          <Route path='candidateevent' element={<CandidatesEvents />} />
+          <Route path='appliedevents' element={<AppliedEvents/>}/>
+          <Route path='enrolledCourses' element={<EnrolledCourses/>}/>
+          <Route path='enrolledCourses/:courseId' element={<Curriculums/>}/>
+          <Route path='assignments' element={<Assignments/>}/>
+          <Route path='jobOffer' element={<JobOffer/>}/>
+          <Route path='newEnrolledCourses' element={<NewEnrolledCourses/>}/>
+          <Route path='newEnrolledCourses/:courseId' element={<NewEnrolledCourses/>}/>
+        </Route>
+      
+
+       
+
+        {/*  college views  */}
+
+        <Route path="/institute/login" element={<CollegeLogin />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/institute/register" element={<CollegeRegister />} />
+        {/* CollegeLayout will wrap only protected pages */}
+        <Route path="/institute" element={<CollegeLayout  />}>
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboardplacements" element={<DashboardPlacements />} />
+          <Route path="dashboardb2b" element={<DashboardB2B />} />
+          <Route path="b2bfollowup" element={<B2BFollowUp />} />
+          <Route path="placements" element={<Placements />} />
+          <Route path="placementfollowup" element={<PlacementFollowUp />} />
+          <Route path="statusplacements" element={<StatusPlacements />} />
+          <Route path="myprofile" element={<Profile/>}/>
+          <Route path="uploadCandidates" element={<UploadCandidates/>}/>
+          <Route path="uploadTemplates" element={<UploadTemplates/>}/>
+          <Route path="myStudents" element={<MyStudents/>}/>
+          <Route path="availablejobs" element={<AvailableJobs/>}/>
+          <Route path="candidatemanagment" element={<CandidateManagementPortal/>}/>
+          <Route path='addcourse' element={<AddCourse/>}/>
+          <Route path='addcoursecopy' element={<AddCoursecopy/>}/>
+          <Route path='editcoursecopy' element={<Editcoursecopy/>}/>
+          <Route path='viewcoursecopy' element={<Viewcoursecopy/>}/>
+         <Route path='viewcourse' element={<ViewCourses/>}/>
+          <Route path='registrationold' element={<Registrations/>}/>
+          <Route path='admissionpost' element={<AdmissionPost/>}/>
+          {/* <Route path='editcourse' element={<EditCourse/>}/> */}
+          <Route path="institute/courses/edit/:id" element={<EditCourse />} />
+          <Route path="courses/edit/:id" element={<EditCourse />} />
+          <Route path='accessManagement' element={<AccessManagement/>}/>
+          <Route path='projectmanagment' element={<CandidateManagementPortal/>}/>
+          <Route path='candidatemanagment_old' element={<CandidateManagementPortal_old/>}/>
+          <Route path='approvalManagement' element={<ApprovalManagement/>}/>
+          <Route path='statusdesign' element={<Status/>}/>
+          <Route path='preverification' element={<PreVerification />} />
+          <Route path='ai-counsellor' element={<AICounsellor />} />
+          <Route path = 'myfollowup' element={<MyFollowup/>}/>
+          <Route path = 'myfollowupb2b' element={<MyFollowupB2B/>}/>
+          <Route path='registrationcards' element={<RegistrationCards/>}/>
+          {/* <Route path = 'addleads' element={<AddLeads/>}/> */}
+          <Route path="/institute/viewcourse/:courseId/candidate/addleads" element={<AddLeads />} />
+          <Route path='batch' element={<Batch/>}/>
+          <Route path='attendance' element={<Attendance/>}/>
+          <Route path='whatapp' element={<Whatapp/>}/>
+          <Route path='whatappTemplate' element={<WhatappTemplate/>}/>
+          <Route path='sales' element={<B2BSales/>}/>
+          <Route path='sales_copy' element={<B2BSalesCopy/>}/>
+          <Route path='statusdesignb2c' element={<StatusB2C/>}/>
+          <Route path='typeOfB2b' element={<TypeB2b/>}/>
+          <Route path='b2bProject' element={<B2BProject/>}/>
+          <Route path='b2bDepartment' element={<B2BDepartment/>}/>
+          <Route path='ranking' element={<LeadRanking/>}/>
+          <Route path='rank' element={<Ranking/>}/>
+          <Route path='leadRanking' element={<LeadRanking/>}/>
+          <Route path='typeOfCategory' element={<TypeCategory/>}/>
+          <Route path='calenderb2c' element={<CalenderFolowupB2C/>}/>
+          <Route path='source' element={<Source/>}/>
+          <Route path='partners' element={<Partners/>}/>
+          <Route path='misreport/:batchId' element={<MisReport/>}/>
+          <Route path='dripmarketing' element={<DripMarketing/>}/>
+          <Route path='re-enquire' element={<ReEnquire/>}/>
+          <Route path='trainerManagement' element={<TrainerManagement/>}/>
+          <Route path='whatsappChat' element={<WhatsappChat/>}/>
+          <Route path='whatsappWallet' element={<WhatsappWallet/>}/>
+          <Route path='emailTemplate' element={<EmailTemplate/>}/>
+          <Route path='target' element={<Target/>}/>
+          <Route path='lrp' element={<Lrp/>}/>
+          <Route path='lrp-view' element={<LrpView/>}/>
+          <Route path='video-timestamp' element={<VideoTimestamp/>}/>
+          <Route path='training' element={<TrainerModule/>}/>
+          <Route path='training/academic-coordinator' element={<AcademicCoordinatorModule/>}/>
+          <Route path='training/senior-trainer' element={<SeniorTrainerModule/>}/>
+          <Route path='registration' element={<Regitrationsold/>}/>
+          <Route path='academicCoordinator' element={<AcademicCoordinator/>}/>
+          <Route path='seniorTrainer' element={<SeniorTrainerModule/>}/>
+        </Route>
+
+        {/* company  */}
+
+        <Route path="/cmp/login" element={<CompanyLogin />} />
+        <Route path="/cmp/register" element={<CompanyRegister />} />
+       
+        <Route path="/cmp" element={<CompanyLayout />}>
+        <Route path="dashboard" element={<CompanyDashboard />} />
+        <Route path="myProfile" element={<CompanyProfile />} /> 
+        <Route path="list/jobs" element={<AllJd />} />
+        <Route path="shortlisted" element={<ShortListedCandidate />} />
+        <Route path="onGoingHiring" element={<OngoingHiring />} />
+        <Route path="candidate/:candidateId" element={<CandidateProfile />} />
+        
+        <Route path="addjobs" element={<AddJd />} />
+        {/* <Route path="editJob/:jobId" element={<editJob />} /> */}
+        <Route path="viewJob/:jobId" element={<ViewJd />} />
+        <Route path="interested-candidates" element ={<IntCandiate/>}/>
+        <Route path='notifications' element={<Notification/>}/>
+        <Route path="list-candidates" element={<ListCandidate/>}/>
+        <Route path="nearbyCandidates" element={<NearByCandidate/>}/>
+        <Route path="Coins" element={<Coins/>}/>
+
+        </Route>
+
+        {/* Training Module  */}
+        <Route path='/trainer/login' element={<TrainerLogin />}/>
+        <Route path="/trainer" element={<TrainerLayout />}>
+        <Route path='dashboard' element={<TrainerDashboard/>}/>
+        <Route path='profile' element={<TrainerProfile/>}/>
+        <Route path='mycourses' element={<MyCourses/>}/>
+        <Route path='viewcourses' element={<ViewTrainerCourses/>}/>
+        {/* <Route path='addcoursecontent' element={<AddCourseContent/>}/> */}
+        <Route path='addcoursecontent' element={<TimeTable/>}/>
+        <Route path='studymaterial' element={<StudyMaterial/>}/>
+        <Route path='batchmanagement' element={<BatchMangement/>}/>
+        {/* <Route path='timetable' element={<TimeTable/>}/> */}
+        <Route path='students' element={<Students/>}/>
+        <Route path='dailydiary' element={<DailyDiary/>}/>
+        <Route path='center' element={<Center/>}/>
+        <Route path='assignment' element={<Assignment/>}/>
+        <Route path='createassignment' element={<CreateAssignment/>}/>
+        <Route path='live-class' element={<StartLiveClass/>}/>
+        <Route path='live-class/room' element={<StartLiveClass/>}/>
+        </Route>
+
+
+
+      </Routes>
+      
+
+
+    </>
+  );
+};
+
+
+
+const App = () => {
+  return (
+    <HelmetProvider>
+      <WhatsAppProvider>
+        <Router>
+          <Layout />
+        </Router>
+      </WhatsAppProvider>
+    </HelmetProvider>
+  );
+};
+
+export default App;

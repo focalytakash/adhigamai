@@ -1,0 +1,25 @@
+{
+  "short_name": "AdhigamAI",
+  "name": "AdhigamAI",
+  "icons": [
+    {
+      "src": "Assets/images/logo/adhigama.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "Assets/images/logo/adhigama.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "Assets/images/logo/adhigama.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#05081c",
+  "background_color": "#ffffff"
+}

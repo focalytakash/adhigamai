@@ -1,0 +1,5125 @@
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import DatePicker from 'react-date-picker';
+
+import axios from 'axios';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { Calendar, TrendingUp, Users, Building, Clock, Target, CheckCircle, XCircle, DollarSign, AlertCircle, UserCheck, FileCheck, AlertTriangle, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+
+// Add Bootstrap 5 CSS to your index.html or import it in your main app file
+// <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+
+// Advanced Date Picker Component
+
+const AdvancedDatePicker = ({ onDateRangeChange, onClose }) => {
+
+    const today = new Date();
+    const todayStr = today.getFullYear() + '-' +
+        String(today.getMonth() + 1).padStart(2, '0') + '-' +
+        String(today.getDate()).padStart(2, '0');
+    const [selectedRange, setSelectedRange] = useState('today');
+    const [customStartDate, setCustomStartDate] = useState(todayStr);
+    const [customEndDate, setCustomEndDate] = useState(todayStr);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentEndMonth, setCurrentEndMonth] = useState(new Date());
+
+    // Helper function to format date as YYYY-MM-DD without timezone issues
+    const formatDateToYYYYMMDD = (date) => {
+        return date.getFullYear() + '-' +
+            String(date.getMonth() + 1).padStart(2, '0') + '-' +
+            String(date.getDate()).padStart(2, '0');
+    };
+
+    const dateRanges = [
+        { id: 'today', label: 'Today' },
+        { id: 'yesterday', label: 'Yesterday' },
+        { id: 'todayYesterday', label: 'Today and yesterday' },
+        { id: 'last7', label: 'Last 7 days' },
+        { id: 'last30', label: 'Last 30 days' },
+        { id: 'thisWeek', label: 'This week' },
+        { id: 'lastWeek', label: 'Last week' },
+        { id: 'thisMonth', label: 'This month' },
+        { id: 'lastMonth', label: 'Last month' },
+        { id: 'maximum', label: 'Maximum' },
+        { id: 'custom', label: 'Custom' }
+    ];
+
+    const getDateRange = (rangeId) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let endDate = new Date(today);
+        let startDate = new Date(today);
+
+        switch (rangeId) {
+            case 'today':
+                // today only
+                startDate = new Date(today);
+                endDate = new Date(today);
+                break;
+            case 'yesterday':
+                // only yesterday
+                startDate = new Date(today);
+                startDate.setDate(startDate.getDate() - 1);
+                endDate = new Date(startDate); // endDate = startDate = yesterday
+                break;
+            case 'todayYesterday':
+                // yesterday and today
+                startDate = new Date(today);
+                startDate.setDate(startDate.getDate() - 1);
+                endDate = new Date(today);
+                break;
+            case 'last7':
+                startDate.setDate(today.getDate() - 6);
+                break;
+            case 'last30':
+                startDate.setDate(today.getDate() - 29);
+                break;
+            case 'thisWeek':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - today.getDay());
+                break;
+            case 'lastWeek':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - today.getDay() - 7);
+                endDate = new Date(today);
+                endDate.setDate(today.getDate() - today.getDay() - 1);
+                break;
+            case 'thisMonth':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                break;
+            case 'lastMonth':
+                startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                break;
+            case 'maximum':
+                startDate = new Date('2020-01-01');
+                break;
+            case 'custom':
+                return { startDate: customStartDate, endDate: customEndDate };
+            default:
+                startDate.setDate(today.getDate() - 29);
+        }
+
+        return {
+            startDate: formatDateToYYYYMMDD(startDate),
+            endDate: formatDateToYYYYMMDD(endDate)
+        };
+    };
+
+    const renderCalendar = (month, setMonth, isEndCalendar = false) => {
+        const year = month.getFullYear();
+        const monthIndex = month.getMonth();
+        const firstDay = new Date(year, monthIndex, 1).getDay();
+        const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+        const days = [];
+
+        // Empty cells for days before month starts
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<td key={`empty-${i}`} className="text-muted"></td>);
+        }
+
+        // Days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const isSelected = dateStr === customStartDate || dateStr === customEndDate;
+            const isInRange = customStartDate && customEndDate &&
+                dateStr >= customStartDate && dateStr <= customEndDate;
+
+            days.push(
+                <td
+                    key={day}
+                    className={`text-center ${isSelected ? 'bg-primary text-white' : isInRange ? 'bg-primary bg-opacity-25' : ''}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => {
+                        if (selectedRange === 'custom') {
+                            if (!isEndCalendar) {
+                                setCustomStartDate(dateStr);
+                                if (customEndDate && dateStr > customEndDate) {
+                                    setCustomEndDate(dateStr);
+                                }
+                            } else {
+                                setCustomEndDate(dateStr);
+                                if (customStartDate && dateStr < customStartDate) {
+                                    setCustomStartDate(dateStr);
+                                }
+                            }
+                        }
+                    }}
+                >
+                    {day}
+                </td>
+            );
+        }
+
+        const weeks = [];
+        for (let i = 0; i < days.length; i += 7) {
+            weeks.push(
+                <tr key={`week-${i}`}>
+                    {days.slice(i, i + 7)}
+                </tr>
+            );
+        }
+
+        return (
+            <div className="calendar-container">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                    <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => setMonth(new Date(year, monthIndex - 1))}
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+                    <span className="fw-medium">
+                        {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </span>
+                    <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={() => setMonth(new Date(year, monthIndex + 1))}
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+                <table className="table table-sm">
+                    <thead>
+                        <tr>
+                            <th className="text-center text-muted small">Sun</th>
+                            <th className="text-center text-muted small">Mon</th>
+                            <th className="text-center text-muted small">Tue</th>
+                            <th className="text-center text-muted small">Wed</th>
+                            <th className="text-center text-muted small">Thu</th>
+                            <th className="text-center text-muted small">Fri</th>
+                            <th className="text-center text-muted small">Sat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {weeks}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
+
+    const handleUpdate = () => {
+        const range = getDateRange(selectedRange);
+        onDateRangeChange(range);
+        onClose();
+    };
+
+    useEffect(() => {
+        // Update display when range changes
+        const range = getDateRange(selectedRange);
+        setCustomStartDate(range.startDate);
+        setCustomEndDate(range.endDate);
+    }, [selectedRange]);
+
+    useEffect(() => {
+        // Always set calendar months based on start/end date or fallback to today
+        if (customStartDate) {
+            setCurrentMonth(new Date(customStartDate));
+        } else {
+            setCurrentMonth(new Date());
+        }
+        if (customEndDate) {
+            setCurrentEndMonth(new Date(customEndDate));
+        } else {
+            setCurrentEndMonth(new Date());
+        }
+    }, [customStartDate, customEndDate]);
+
+    return (
+        <div className="position-fixed top-0 start-0 w-100 h-100" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+            <div className="position-absolute bg-white rounded shadow" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflow: 'auto' }}>
+                <div className="p-4">
+                    <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h5 className="mb-0">Select Date Range</h5>
+                        <button className="btn-close" onClick={onClose}></button>
+                    </div>
+
+                    <div className="row">
+                        {/* Left side - Predefined ranges */}
+                        <div className="col-md-4 border-end">
+                            <div className="list-group list-group-flush">
+                                {dateRanges.map(range => (
+                                    <button
+                                        key={range.id}
+                                        className={`list-group-item list-group-item-action ${selectedRange === range.id ? 'active' : ''}`}
+                                        onClick={() => setSelectedRange(range.id)}
+                                    >
+                                        {range.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Right side - Calendars */}
+                        <div className="col-md-8">
+                            <div className="mb-3">
+                                <div className="d-flex align-items-center justify-content-between mb-3">
+                                    <div>
+                                        <CalendarDays className="text-primary me-2" size={20} />
+                                        <span className="fw-medium">
+                                            {selectedRange === 'custom' ? 'Select dates' :
+                                                `${new Date(customStartDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })} - 
+                         ${new Date(customEndDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="row">
+                                    <div className="col-6">
+                                        <div className="mb-2">
+                                            <label className="form-label small">Start Date</label>
+                                            <input
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                value={customStartDate}
+                                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                            />
+                                        </div>
+                                        {renderCalendar(currentMonth, setCurrentMonth, false)}
+                                    </div>
+                                    <div className="col-6">
+                                        <div className="mb-2">
+                                            <label className="form-label small">End Date</label>
+                                            <input
+                                                type="text"
+                                                className="form-control form-control-sm"
+                                                value={customEndDate}
+                                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                            />
+                                        </div>
+                                        {renderCalendar(currentEndMonth, setCurrentEndMonth, true)}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        className="d-flex justify-content-end gap-2 mt-3 pt-3 border-top"
+                        style={{
+                            position: 'sticky',
+                            bottom: 0,
+                            background: '#fff',
+                            zIndex: 10,
+                            paddingBottom: '1rem'
+                        }}
+                    >
+                        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+                        <button className="btn btn-primary" onClick={handleUpdate}>Update</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+
+const MultiSelectCheckbox = ({
+    title,
+    options,
+    selectedValues,
+    onChange,
+    icon = "fas fa-list",
+    isOpen,
+    onToggle
+}) => {
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        if (!isOpen) setSearchTerm('');
+    }, [isOpen]);
+
+    const handleCheckboxChange = (value) => {
+        const newValues = selectedValues.includes(value)
+            ? selectedValues.filter(v => v !== value)
+            : [...selectedValues, value];
+        onChange(newValues);
+    };
+
+    const optionsSafe = Array.isArray(options) ? options : [];
+    const normalizeLabel = (option) => String(option?.label ?? '').trim();
+
+    const sortedOptions = useMemo(() => {
+        return [...optionsSafe].sort((a, b) =>
+            normalizeLabel(a).localeCompare(normalizeLabel(b), undefined, {
+                numeric: true,
+                sensitivity: 'base'
+            })
+        );
+    }, [optionsSafe]);
+
+    const visibleOptions = useMemo(() => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return sortedOptions;
+        return sortedOptions.filter((option) => normalizeLabel(option).toLowerCase().includes(term));
+    }, [sortedOptions, searchTerm]);
+
+    // Get display text for selected items
+    const getDisplayText = () => {
+        if (selectedValues.length === 0) {
+            return `Select ${title}`;
+        } else if (selectedValues.length === 1) {
+            const selectedOption = optionsSafe.find(opt => opt.value === selectedValues[0]);
+            return selectedOption ? selectedOption.label : selectedValues[0];
+        } else if (selectedValues.length <= 2) {
+            const selectedLabels = selectedValues.map(val => {
+                const option = optionsSafe.find(opt => opt.value === val);
+                return option ? option.label : val;
+            });
+            return selectedLabels.join(', ');
+        } else {
+            return `${selectedValues.length} items selected`;
+        }
+    };
+
+    return (
+        <div className="multi-select-container-new">
+            <label className="form-label small fw-bold text-dark d-flex align-items-center mb-2">
+                <i className={`${icon} me-1 text-primary`}></i>
+                {title}
+                {selectedValues.length > 0 && (
+                    <span className="badge bg-primary ms-2">{selectedValues.length}</span>
+                )}
+            </label>
+
+            <div className="multi-select-dropdown-new">
+                <button
+                    type="button"
+                    className={`form-select multi-select-trigger ${isOpen ? 'open' : ''}`}
+                    onClick={onToggle}
+                    style={{ cursor: 'pointer', textAlign: 'left' }}
+                >
+                    <span className="select-display-text">
+                        {getDisplayText()}
+                    </span>
+                    <i className={`fas fa-chevron-${isOpen ? 'up' : 'down'} dropdown-arrow`}></i>
+                </button>
+
+                {isOpen && (
+                    <div className="multi-select-options-new">
+                        {/* Search functionality (optional) */}
+                        <div className="options-search">
+                            <div className="input-group input-group-sm">
+                                <span className="input-group-text" style={{ height: '40px' }}>
+                                    <i className="fas fa-search"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder={`Search ${title.toLowerCase()}...`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Options List */}
+                        <div className="options-list-new">
+                            {visibleOptions.map((option) => (
+                                <label key={option.value} className="option-item-new">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input me-2"
+                                        checked={selectedValues.includes(option.value)}
+                                        onChange={() => handleCheckboxChange(option.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                    <span className="option-label-new">{option.label}</span>
+                                    {selectedValues.includes(option.value) && (
+                                        <i className="fas fa-check text-primary ms-auto"></i>
+                                    )}
+                                </label>
+                            ))}
+
+                            {optionsSafe.length === 0 && (
+                                <div className="no-options">
+                                    <i className="fas fa-info-circle me-2"></i>
+                                    No {title.toLowerCase()} available
+                                </div>
+                            )}
+
+                            {optionsSafe.length > 0 && visibleOptions.length === 0 && (
+                                <div className="no-options">
+                                    <i className="fas fa-search me-2"></i>
+                                    No matches for "{searchTerm}"
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer with count */}
+                        {selectedValues.length > 0 && (
+                            <div className="options-footer">
+                                <small className="text-muted">
+                                    {selectedValues.length} of {optionsSafe.length} selected
+                                </small>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const LeadAnalyticsDashboard = () => {
+
+    const backendUrl = process.env.REACT_APP_MIPIE_BACKEND_URL;
+    const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const token = userData.token;
+    const [aiDailySummary, setAiDailySummary] = useState(null);
+    const [aiDailySummaryLoading, setAiDailySummaryLoading] = useState(false);
+    const [aiDailySummaryError, setAiDailySummaryError] = useState(null);
+    const [aiAdmissionSummary, setAiAdmissionSummary] = useState(null);
+    const [aiAdmissionSummaryLoading, setAiAdmissionSummaryLoading] = useState(false);
+    const [aiAdmissionSummaryError, setAiAdmissionSummaryError] = useState(null);
+    const [aiKycSummary, setAiKycSummary] = useState(null);
+    const [aiKycSummaryLoading, setAiKycSummaryLoading] = useState(false);
+    const [aiKycSummaryError, setAiKycSummaryError] = useState(null);
+    const [aiLeadIntel, setAiLeadIntel] = useState([]);
+    const [aiLeadIntelLoading, setAiLeadIntelLoading] = useState(false);
+    const [aiLeadIntelError, setAiLeadIntelError] = useState(null);
+    const [selectedAiLeadId, setSelectedAiLeadId] = useState('');
+    const [aiLeadSearchTerm, setAiLeadSearchTerm] = useState('');
+    const [aiLeadDetail, setAiLeadDetail] = useState(null);
+    const [aiLeadActions, setAiLeadActions] = useState([]);
+    const [aiLeadDetailLoading, setAiLeadDetailLoading] = useState(false);
+    const [aiLeadDetailError, setAiLeadDetailError] = useState(null);
+    const [aiSupervisionSearchTerm, setAiSupervisionSearchTerm] = useState('');
+    const [aiSupervisionQueueFilter, setAiSupervisionQueueFilter] = useState('all');
+    const [pendingAiLeadDetailId, setPendingAiLeadDetailId] = useState(null);
+    const aiDetailSectionRef = useRef(null);
+
+    const getLeadDisplayName = (lead) => {
+        const fullName = [lead?.firstName, lead?.middleName, lead?.lastName].filter(Boolean).join(' ').trim();
+        return fullName
+            || lead?.name
+            || lead?.candidateName
+            || lead?._candidate?.name
+            || lead?._candidate?.fullName
+            || lead?._candidate?.personalInfo?.fullName
+            || 'Unnamed Lead';
+    };
+
+    const getLeadCenterName = (lead) => lead?._center?.name || lead?.centerName || 'Unknown Center';
+
+    const getLeadCounselorName = (lead) => {
+        const latestAssignment = Array.isArray(lead?.leadAssignment) && lead.leadAssignment.length > 0
+            ? lead.leadAssignment[lead.leadAssignment.length - 1]
+            : null;
+
+        return latestAssignment?.counsellorName || latestAssignment?.name || 'Unassigned';
+    };
+
+    const getLeadBatchName = (lead) => (
+        lead?._batch?.name
+        || lead?.batchName
+        || lead?._course?.batchName
+        || ''
+    );
+
+    const getLeadContactNumbers = (lead) => (
+        [
+            lead?.mobile,
+            lead?.phone,
+            lead?.whatsappNumber,
+            lead?._candidate?.mobile,
+            lead?._candidate?.phone,
+            lead?._candidate?.whatsappNumber,
+            lead?._candidate?.personalInfo?.mobile,
+            lead?._candidate?.personalInfo?.phone,
+        ].filter(Boolean)
+    );
+
+    const getLeadDocumentSnapshot = (lead) => {
+        const documents = Array.isArray(lead?.uploadedDocs) ? lead.uploadedDocs : [];
+
+        const normalizedDocuments = documents.map((doc) => {
+            const latestUpload = Array.isArray(doc?.uploads) && doc.uploads.length > 0
+                ? doc.uploads[doc.uploads.length - 1]
+                : null;
+
+            const rawStatus = latestUpload?.status || doc?.status || '';
+            const hasUpload = Boolean(
+                latestUpload?.fileUrl
+                || doc?.fileUrl
+                || (Array.isArray(doc?.uploads) && doc.uploads.length > 0)
+            );
+
+            let status = rawStatus;
+            if (!status) {
+                status = hasUpload ? 'Uploaded' : 'Not Uploaded';
+            }
+
+            return {
+                name: doc?.Name || doc?.name || 'Unknown Document',
+                hasUpload,
+                status,
+            };
+        });
+
+        const pendingDocs = normalizedDocuments.filter((doc) =>
+            ['Not Uploaded', 'No Uploads', 'Pending', 'Uploaded'].includes(doc.status) && !['Verified', 'Rejected'].includes(doc.status)
+        ).length;
+        const rejectedDocs = normalizedDocuments.filter((doc) => doc.status === 'Rejected').length;
+        const verifiedDocs = normalizedDocuments.filter((doc) => doc.status === 'Verified').length;
+        const pendingVerificationDocs = normalizedDocuments.filter((doc) => doc.status === 'Pending').length;
+        const hasAnyUploads = normalizedDocuments.some((doc) => doc.hasUpload);
+
+        const category = rejectedDocs > 0
+            ? 'Rejected'
+            : pendingVerificationDocs > 0
+                ? 'Pending Verification'
+                : !lead?.kyc && (pendingDocs > 0 || !hasAnyUploads)
+                    ? 'Pending KYC'
+                    : lead?.kyc
+                        ? 'Verified'
+                        : 'Review';
+
+        return {
+            documents: normalizedDocuments,
+            pendingDocs,
+            rejectedDocs,
+            verifiedDocs,
+            pendingVerificationDocs,
+            hasAnyUploads,
+            category,
+        };
+    };
+
+    const getLeadPrioritySeed = (lead) => {
+        let score = 0;
+
+        if (lead?.dropout) score += 30;
+        if (lead?.courseStatus === 0) score += 25;
+        if (lead?.followupDate && new Date(lead.followupDate) < new Date()) score += 20;
+        if (lead?.kycStage && !lead?.kyc) score += 15;
+        if (lead?.registrationFee !== 'Paid') score += 10;
+        if (lead?.admissionDone) score -= 20;
+
+        return score;
+    };
+
+    const getLeadNotes = (lead) => {
+        const remarkNotes = Array.isArray(lead?.remarks)
+            ? lead.remarks.map((item) => item?.remark || item?.text || item?.comment).filter(Boolean)
+            : [];
+        const followupNotes = Array.isArray(lead?.followups)
+            ? lead.followups.map((item) => item?.remark || item?.note || item?.comment).filter(Boolean)
+            : [];
+
+        return [...remarkNotes, ...followupNotes].slice(-10);
+    };
+
+    const getLeadFollowupSummary = (lead) => {
+        const followups = Array.isArray(lead?.followups) ? lead.followups : [];
+        const totalAttempts = followups.length;
+
+        let doneCount = 0;
+        let missedCount = 0;
+        let plannedCount = 0;
+
+        followups.forEach((item) => {
+            const normalizedStatus = String(item?.status || '').trim().toLowerCase();
+            if (normalizedStatus === 'done') doneCount += 1;
+            else if (normalizedStatus === 'missed') missedCount += 1;
+            else if (normalizedStatus === 'planned') plannedCount += 1;
+        });
+
+        let sufficiency = 'Not Enough';
+        let sufficiencyScore = 1;
+        let guidance = 'Lead has very limited follow-up history. Increase contact attempts.';
+
+        if (totalAttempts >= 4) {
+            sufficiency = 'Enough';
+            sufficiencyScore = 3;
+            guidance = 'Follow-up attempts look sufficient. Focus on quality, closure, or escalation.';
+        } else if (totalAttempts >= 2) {
+            sufficiency = 'Moderate';
+            sufficiencyScore = 2;
+            guidance = 'Lead has some follow-up history, but may still need more structured attempts.';
+        }
+
+        return {
+            totalAttempts,
+            doneCount,
+            missedCount,
+            plannedCount,
+            sufficiency,
+            sufficiencyScore,
+            guidance,
+        };
+    };
+
+    const getLowFollowupActionPlan = (lead) => {
+        const leadName = getLeadDisplayName(lead);
+        const courseName = lead?._course?.name || lead?.courseName || 'the selected course';
+        const followupSummary = getLeadFollowupSummary(lead);
+
+        if (followupSummary.totalAttempts >= 2) {
+            return [];
+        }
+
+        return [
+            `Call ${leadName} and confirm current interest in ${courseName}.`,
+            'Check the main objection: fee, location, timing, documents, or no response.',
+            'Send one clear WhatsApp follow-up with course value, next step, and counselor name.',
+            'Set the next action date immediately after the conversation or outreach attempt.',
+            'If there is still no response after repeated attempts, escalate to the counselor supervisor.'
+        ];
+    };
+
+    const buildAiLeadProfile = useCallback((lead) => {
+        const documentSnapshot = getLeadDocumentSnapshot(lead);
+        const followupSummary = getLeadFollowupSummary(lead);
+        const followupDate = lead?.followupDate || null;
+        const isOverdue = followupDate ? new Date(followupDate) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
+
+        return {
+            _id: lead?._id,
+            _candidate: lead?._candidate,
+            _course: lead?._course,
+            _center: lead?._center,
+            _leadStatus: lead?._leadStatus,
+            leadAssignment: lead?.leadAssignment,
+            followupDate,
+            followups: lead?.followups || [],
+            remarks: lead?.remarks || [],
+            createdAt: lead?.createdAt || null,
+            updatedAt: lead?.updatedAt || null,
+            admissionDate: lead?.admissionDate || null,
+            registrationFee: lead?.registrationFee || 'Unknown',
+            dropout: !!lead?.dropout,
+            kyc: !!lead?.kyc,
+            kycStage: !!lead?.kycStage,
+            admissionDone: !!lead?.admissionDone,
+            studentName: getLeadDisplayName(lead),
+            centerName: getLeadCenterName(lead),
+            counselorName: getLeadCounselorName(lead),
+            courseName: lead?._course?.name || lead?.courseName || lead?.course || 'Not specified',
+            batchName: getLeadBatchName(lead) || 'Unassigned',
+            latestLeadStatus: lead?._leadStatus?.title || lead?.leadStatus || 'Unknown',
+            notes: getLeadNotes(lead),
+            riskContext: {
+                isOverdueFollowup: isOverdue,
+                hasNoUploads: !documentSnapshot.hasAnyUploads,
+                pendingDocs: documentSnapshot.pendingDocs,
+                rejectedDocs: documentSnapshot.rejectedDocs,
+                verifiedDocs: documentSnapshot.verifiedDocs,
+                pendingVerificationDocs: documentSnapshot.pendingVerificationDocs,
+                kycBucket: documentSnapshot.category,
+                followupAttempts: followupSummary.totalAttempts,
+                followupDoneCount: followupSummary.doneCount,
+                followupMissedCount: followupSummary.missedCount,
+                followupPlannedCount: followupSummary.plannedCount,
+                followupSufficiency: followupSummary.sufficiency,
+            },
+        };
+    }, []);
+
+    const openLeadInAiDetail = (leadId) => {
+        if (!leadId) return;
+        setSelectedAiLeadId(leadId);
+        setAiLeadDetail(null);
+        setAiLeadActions([]);
+        setAiLeadDetailError(null);
+        setPendingAiLeadDetailId(leadId);
+        window.requestAnimationFrame(() => {
+            aiDetailSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    };
+    // Initialize with today's date
+    const getInitialDates = () => {
+        const today = new Date();
+        // Use the same reliable date formatting method
+        const todayStr = today.getFullYear() + '-' +
+            String(today.getMonth() + 1).padStart(2, '0') + '-' +
+            String(today.getDate()).padStart(2, '0');
+        return {
+            start: todayStr,
+            end: todayStr
+        };
+    };
+
+    //filter stats
+
+    const [formData, setFormData] = useState({
+        projects: {
+            type: "includes",
+            values: []
+        },
+        verticals: {
+            type: "includes",
+            values: []
+        },
+        course: {
+            type: "includes",
+            values: []
+        },
+        center: {
+            type: "includes",
+            values: []
+        },
+        counselor: {
+            type: "includes",
+            values: []
+        }
+    });
+
+    const [isFilterCollapsed, setIsFilterCollapsed] = useState(true);
+
+    const totalSelected = Object.values(formData).reduce((total, filter) => total + filter.values.length, 0);
+
+
+    const [verticalOptions, setVerticalOptions] = useState([]);
+    const [projectOptions, setProjectOptions] = useState([]);
+    const [courseOptions, setCourseOptions] = useState([]);
+    const [centerOptions, setCenterOptions] = useState([]);
+    const [counselorOptions, setCounselorOptions] = useState([]);
+
+    // Fetch filter options from backend API on mount
+    useEffect(() => {
+        const fetchFilterOptions = async () => {
+            try {
+                const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
+                const token = userData.token;
+                const backendUrl = process.env.REACT_APP_MIPIE_BACKEND_URL;
+                const res = await axios.get(`${backendUrl}/college/filters-data`, {
+                    headers: { 'x-auth': token }
+                });
+                if (res.data.status) {
+                    setVerticalOptions(res.data.verticals.map(v => ({ value: v._id, label: v.name })));
+                    setProjectOptions(res.data.projects.map(p => ({ value: p._id, label: p.name })));
+                    setCourseOptions(res.data.courses.map(c => ({ value: c._id, label: c.name })));
+                    setCenterOptions(res.data.centers.map(c => ({ value: c._id, label: c.name })));
+                    setCounselorOptions(res.data.counselors.map(c => ({ value: c._id, label: c.name })));
+                }
+            } catch (err) {
+                console.error('Failed to fetch filter options:', err);
+            }
+        };
+        fetchFilterOptions();
+    }, []);
+
+
+
+
+    const handleCriteriaChange = (criteria, values) => {
+        console.log('values', values, criteria, 'criteria');
+        setFormData((prevState) => ({
+            ...prevState,
+            [criteria]: {
+                type: "includes",
+                values: values
+            }
+        }));
+        console.log(`Selected ${criteria}:`, values);
+        // Reset to first page and fetch with new filters
+    };
+
+    const [dropdownStates, setDropdownStates] = useState({
+        projects: false,
+        verticals: false,
+        course: false,
+        center: false,
+        counselor: false,
+        sector: false
+    });
+
+    const toggleDropdown = (filterName) => {
+        setDropdownStates(prev => {
+            // Close all other dropdowns and toggle the current one
+            const newState = Object.keys(prev).reduce((acc, key) => {
+                acc[key] = key === filterName ? !prev[key] : false;
+                return acc;
+            }, {});
+            return newState;
+        });
+    };
+
+    const [filterData, setFilterData] = useState({
+        name: '',
+        courseType: '',
+        status: 'true',
+        leadStatus: '',
+        sector: '',
+        createdFromDate: null,
+        createdToDate: null,
+        modifiedFromDate: null,
+        modifiedToDate: null,
+        nextActionFromDate: null,
+        nextActionToDate: null,
+        projects: [],
+        verticals: [],
+        course: [],
+        center: [],
+        counselor: []
+
+    });
+
+    const clearAllFilters = () => {
+        setFilterData({
+            name: '',
+            courseType: '',
+            status: 'true',
+            kyc: false,
+            leadStatus: '',
+            sector: '',
+            createdFromDate: null,
+            createdToDate: null,
+            modifiedFromDate: null,
+            modifiedToDate: null,
+            nextActionFromDate: null,
+            nextActionToDate: null,
+        });
+
+    };
+
+    const handleFilterChange = (e) => {
+        try {
+            const { name, value } = e.target;
+            const newFilterData = { ...filterData, [name]: value };
+            setFilterData(newFilterData);
+
+
+            fetchProfileData(newFilterData);
+
+        } catch (error) {
+            console.error('Filter change error:', error);
+        }
+    };
+
+    const handleDateFilterChange = (date, fieldName) => {
+        const newFilterData = {
+            ...filterData,
+            [fieldName]: date
+        };
+        setFilterData(newFilterData);
+
+    };
+    const formatDate = (date) => {
+        // If the date is not a valid Date object, try to convert it
+        if (date && !(date instanceof Date)) {
+            date = new Date(date);
+        }
+
+        // Check if the date is valid
+        if (!date || isNaN(date)) return ''; // Return an empty string if invalid
+
+        // Now call toLocaleDateString
+        return date.toLocaleDateString('en-GB');
+    };
+
+    // Clear functions
+    const clearDateFilter = (filterType) => {
+        let newFilterData = { ...filterData };
+
+        if (filterType === 'created') {
+            newFilterData.createdFromDate = null;
+            newFilterData.createdToDate = null;
+        } else if (filterType === 'modified') {
+            newFilterData.modifiedFromDate = null;
+            newFilterData.modifiedToDate = null;
+        } else if (filterType === 'nextAction') {
+            newFilterData.nextActionFromDate = null;
+            newFilterData.nextActionToDate = null;
+        }
+
+        setFilterData(newFilterData);
+    };
+
+    const initialDates = getInitialDates();
+    const [selectedCenter, setSelectedCenter] = useState('all');
+    const [selectedPeriod, setSelectedPeriod] = useState('today');
+    const [activeTab, setActiveTab] = useState('overview');
+    const [startDate, setStartDate] = useState(initialDates.start);
+    const [endDate, setEndDate] = useState(initialDates.end);
+    const [useCustomDate, setUseCustomDate] = useState(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // Get today's date for filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Handle date range change from advanced picker
+    const handleDateRangeChange = (dateRange) => {
+        setStartDate(dateRange.startDate);
+        setEndDate(dateRange.endDate);
+
+        // Check if this is a predefined range
+        const today = new Date();
+        const startDateObj = new Date(dateRange.startDate);
+        const endDateObj = new Date(dateRange.endDate);
+
+        // Calculate days difference
+        const daysDiff = Math.floor((endDateObj - startDateObj) / (1000 * 60 * 60 * 24)) + 1;
+
+        // Helper function to format date as YYYY-MM-DD without timezone issues
+        const formatDateToYYYYMMDD = (date) => {
+            return date.getFullYear() + '-' +
+                String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                String(date.getDate()).padStart(2, '0');
+        };
+
+        // Try to match with predefined periods
+        if (daysDiff === 1 && dateRange.startDate === formatDateToYYYYMMDD(today)) {
+            setSelectedPeriod('today');
+            setUseCustomDate(false);
+        } else if (daysDiff === 7) {
+            setSelectedPeriod('last7');
+            setUseCustomDate(false);
+        } else if (daysDiff === 30) {
+            setSelectedPeriod('last30');
+            setUseCustomDate(false);
+        } else {
+            setSelectedPeriod('custom');
+            setUseCustomDate(true);
+        }
+    };
+
+    // Sample data based on actual AppliedCourses schema
+    const [appliedCoursesData, setAppliedCoursesData] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Move this inside the component
+    const centers = useMemo(() => {
+        if (!appliedCoursesData || appliedCoursesData.length === 0) return [];
+        return [...new Set(
+            appliedCoursesData
+                .filter(lead => lead && lead._center && lead._center.name)
+                .map(lead => lead._center.name)
+        )].filter(Boolean); // Remove any empty strings
+    }, [appliedCoursesData]);
+
+    useEffect(() => {
+
+        fetchProfileData();
+    }, [token, backendUrl, startDate, endDate, selectedPeriod, useCustomDate]);
+
+    const fetchProfileData = async (filters = filterData) => {
+        try {
+            setIsLoading(true);
+
+            if (!token) {
+                setAppliedCoursesData([]);
+                setIsLoading(false);
+                return;
+            }
+
+            const queryParams = new URLSearchParams({
+                ...(filters?.name && { name: filters.name }),
+                ...(filters?.courseType && { courseType: filters.courseType }),
+                ...(filters?.status && filters.status !== 'true' && { status: filters.status }),
+                ...(filters?.kyc && filters.kyc !== 'false' && { kyc: filters.kyc }),
+                ...(filters?.leadStatus && { leadStatus: filters.leadStatus }),
+                ...(filters?.sector && { sector: filters.sector }),
+                ...(filters?.createdFromDate && { createdFromDate: filters.createdFromDate.toISOString() }),
+                ...(filters?.createdToDate && { createdToDate: filters.createdToDate.toISOString() }),
+                ...(filters?.modifiedFromDate && { modifiedFromDate: filters.modifiedFromDate.toISOString() }),
+                ...(filters?.modifiedToDate && { modifiedToDate: filters.modifiedToDate.toISOString() }),
+                ...(filters?.nextActionFromDate && { nextActionFromDate: filters.nextActionFromDate.toISOString() }),
+                ...(filters?.nextActionToDate && { nextActionToDate: filters.nextActionToDate.toISOString() }),
+                // Multi-select filters
+                ...(formData?.projects?.values?.length > 0 && { projects: JSON.stringify(formData.projects.values) }),
+                ...(formData?.verticals?.values?.length > 0 && { verticals: JSON.stringify(formData.verticals.values) }),
+                ...(formData?.course?.values?.length > 0 && { course: JSON.stringify(formData.course.values) }),
+                ...(formData?.center?.values?.length > 0 && { center: JSON.stringify(formData.center.values) }),
+                ...(formData?.counselor?.values?.length > 0 && { counselor: JSON.stringify(formData.counselor.values) })
+            });
+            // If no date filter is selected, send no parameters (will return all data)
+            console.log(formData.counselor.values, 'queryParams')
+            // Use the new dashboard API with date filtering
+            const response = await axios.get(`${backendUrl}/college/dashbord-data?${queryParams}`, {
+                headers: {
+                    'x-auth': token,
+                }
+            });
+
+            if (response.data.success && response.data.data) {
+                setAppliedCoursesData(response.data.data || []);
+            } else {
+                setAppliedCoursesData([]);
+            }
+
+        } catch (error) {
+            setAppliedCoursesData([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    // After fetching data, add a fake substatus to the first lead for testing
+    if (appliedCoursesData.length > 0) {
+        appliedCoursesData[0]._leadStatus = appliedCoursesData[0]._leadStatus || {};
+        appliedCoursesData[0]._leadStatus.substatuses = [{ title: 'Test Substatus' }];
+    }
+
+    // Data is now filtered by backend, so we use it directly
+    const filteredData = appliedCoursesData;
+
+    const dashboardAiStats = useMemo(() => {
+        const totalLeads = filteredData.length;
+        const newLeads = totalLeads; // API already filtered by date range; treat as "new in period"
+        const kycPending = filteredData.filter(l => l.kycStage && !l.kyc).length;
+        const kycDone = filteredData.filter(l => l.kyc).length;
+        const admissions = filteredData.filter(l => l.admissionDone).length;
+
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const overdueFollowups = filteredData.filter(l => l.followupDate && new Date(l.followupDate) < todayStart).length;
+
+        return {
+            totalLeads,
+            newLeads,
+            kycPending,
+            kycDone,
+            admissions,
+            overdueFollowups,
+        };
+    }, [filteredData]);
+
+    const aiScopedLeads = useMemo(() => (
+        selectedCenter === 'all'
+            ? filteredData
+            : filteredData.filter(lead => lead?._center?.name === selectedCenter)
+    ), [filteredData, selectedCenter]);
+
+    const aiLeadCandidates = useMemo(() => (
+        [...aiScopedLeads]
+            .filter(Boolean)
+            .sort((a, b) => getLeadPrioritySeed(b) - getLeadPrioritySeed(a))
+            .slice(0, 5)
+            .map((lead) => {
+                const aiProfile = buildAiLeadProfile(lead);
+                return {
+                    _id: aiProfile._id,
+                    name: aiProfile.studentName,
+                    center: aiProfile.centerName,
+                    counselor: aiProfile.counselorName,
+                    course: aiProfile.courseName,
+                    status: aiProfile.latestLeadStatus,
+                    substatuses: Array.isArray(lead?._leadStatus?.substatuses)
+                        ? lead._leadStatus.substatuses.map((item) => item?.title).filter(Boolean)
+                        : [],
+                    remarks: aiProfile.notes.slice(-5),
+                    admissionDone: aiProfile.admissionDone,
+                    dropout: aiProfile.dropout,
+                    kycDone: aiProfile.kyc,
+                    kycStage: aiProfile.kycStage,
+                    registrationFee: aiProfile.registrationFee,
+                    followupDate: aiProfile.followupDate,
+                    createdAt: aiProfile.createdAt,
+                    batchName: aiProfile.batchName,
+                    riskContext: aiProfile.riskContext,
+                };
+            })
+    ), [aiScopedLeads, buildAiLeadProfile]);
+
+    const aiLeadPrioritySnapshot = useMemo(() => ({
+        high: aiLeadIntel.filter((lead) => lead.priority === 'High').length,
+        medium: aiLeadIntel.filter((lead) => lead.priority === 'Medium').length,
+        low: aiLeadIntel.filter((lead) => lead.priority === 'Low').length,
+    }), [aiLeadIntel]);
+
+    const kycSupervisorData = useMemo(() => {
+        const stats = {
+            totalLeads: aiScopedLeads.length,
+            kycPending: 0,
+            kycDone: 0,
+            leadsWithPendingDocuments: 0,
+            leadsWithRejectedDocuments: 0,
+            leadsWithoutAnyUploads: 0,
+            leadsPendingVerification: 0,
+        };
+
+        const leadRiskList = aiScopedLeads.map((lead) => {
+            const documentSnapshot = getLeadDocumentSnapshot(lead);
+            const pendingDocs = documentSnapshot.pendingDocs;
+            const rejectedDocs = documentSnapshot.rejectedDocs;
+            const verifiedDocs = documentSnapshot.verifiedDocs;
+            const hasAnyUploads = documentSnapshot.hasAnyUploads;
+            const pendingVerification = documentSnapshot.pendingVerificationDocs > 0;
+
+            if (lead?.kyc) stats.kycDone += 1;
+            if (!lead?.kyc && documentSnapshot.category === 'Pending KYC') stats.kycPending += 1;
+            if (pendingDocs > 0 && !lead?.kyc) stats.leadsWithPendingDocuments += 1;
+            if (rejectedDocs > 0) stats.leadsWithRejectedDocuments += 1;
+            if (!hasAnyUploads) stats.leadsWithoutAnyUploads += 1;
+            if (pendingVerification) stats.leadsPendingVerification += 1;
+
+            const riskScore =
+                (rejectedDocs * 30) +
+                (pendingDocs * 10) +
+                (pendingVerification ? 20 : 0) +
+                (!hasAnyUploads ? 20 : 0) +
+                (lead?.kycStage && !lead?.kyc ? 15 : 0) -
+                (lead?.kyc ? 25 : 0) -
+                (verifiedDocs * 5);
+
+            return {
+                _id: lead?._id,
+                name: getLeadDisplayName(lead),
+                center: getLeadCenterName(lead),
+                course: lead?._course?.name || lead?.courseName || 'Not specified',
+                pendingDocs,
+                rejectedDocs,
+                verifiedDocs,
+                hasAnyUploads,
+                pendingVerification,
+                category: documentSnapshot.category,
+                riskScore,
+            };
+        });
+
+        return {
+            stats,
+            kycRows: leadRiskList
+                .map((lead) => ({
+                    _id: lead._id,
+                    studentName: lead.name,
+                    courseName: lead.course,
+                    centerName: lead.center,
+                    pendingDocs: lead.pendingDocs,
+                    rejectedDocs: lead.rejectedDocs,
+                    verifiedDocs: lead.verifiedDocs,
+                    uploadStatus: lead.hasAnyUploads ? 'Uploaded' : 'No Upload',
+                    verificationStatus: lead.pendingVerification ? 'Pending Verification' : 'Not Pending',
+                    kycCategory: lead.category,
+                }))
+                .sort((a, b) => (
+                    (b.pendingDocs + b.rejectedDocs) - (a.pendingDocs + a.rejectedDocs)
+                )),
+            topRiskLeads: leadRiskList
+                .filter((lead) => lead.riskScore > 0)
+                .sort((a, b) => b.riskScore - a.riskScore)
+                .slice(0, 5),
+        };
+    }, [aiScopedLeads]);
+
+    const admissionSupervisorData = useMemo(() => {
+        const admittedLeads = aiScopedLeads.filter((lead) => lead?.admissionDone || lead?.admissionDate);
+        const stats = {
+            totalAdmitted: admittedLeads.length,
+            paidAdmissions: 0,
+            unpaidAdmissions: 0,
+            dropouts: 0,
+            noBatchAssigned: 0,
+            noBranchAssigned: 0,
+            missingAdmissionDate: 0,
+        };
+        const courseMap = {};
+
+        const riskLeads = admittedLeads.map((lead) => {
+            const batchName = getLeadBatchName(lead);
+            const hasBatch = !!batchName;
+            const hasBranch = !!(lead?._center?._id || lead?._center?.name || lead?.centerName);
+            const isPaid = lead?.registrationFee === 'Paid';
+            const isDropout = !!lead?.dropout;
+            const hasAdmissionDate = !!lead?.admissionDate;
+            const courseName = lead?._course?.name || lead?.courseName || 'Not specified';
+
+            if (isPaid) stats.paidAdmissions += 1;
+            if (!isPaid) stats.unpaidAdmissions += 1;
+            if (isDropout) stats.dropouts += 1;
+            if (!hasBatch) stats.noBatchAssigned += 1;
+            if (!hasBranch) stats.noBranchAssigned += 1;
+            if (!hasAdmissionDate) stats.missingAdmissionDate += 1;
+
+            if (!courseMap[courseName]) {
+                courseMap[courseName] = {
+                    courseName,
+                    totalAdmitted: 0,
+                    paidAdmissions: 0,
+                    unpaidAdmissions: 0,
+                    dropouts: 0,
+                    noBatchAssigned: 0,
+                    noBranchAssigned: 0,
+                };
+            }
+
+            courseMap[courseName].totalAdmitted += 1;
+            if (isPaid) courseMap[courseName].paidAdmissions += 1;
+            if (!isPaid) courseMap[courseName].unpaidAdmissions += 1;
+            if (isDropout) courseMap[courseName].dropouts += 1;
+            if (!hasBatch) courseMap[courseName].noBatchAssigned += 1;
+            if (!hasBranch) courseMap[courseName].noBranchAssigned += 1;
+
+            const riskScore =
+                (isDropout ? 40 : 0) +
+                (!isPaid ? 20 : 0) +
+                (!hasBatch ? 20 : 0) +
+                (!hasBranch ? 15 : 0) +
+                (!hasAdmissionDate ? 10 : 0);
+
+            return {
+                _id: lead?._id,
+                name: getLeadDisplayName(lead),
+                course: courseName,
+                center: getLeadCenterName(lead),
+                batchName: batchName || 'Unassigned',
+                isPaid,
+                isDropout,
+                hasAdmissionDate,
+                riskScore,
+            };
+        });
+
+        return {
+            stats,
+            courseBreakdown: Object.values(courseMap)
+                .sort((a, b) => b.totalAdmitted - a.totalAdmitted || a.courseName.localeCompare(b.courseName)),
+            admissionRows: admittedLeads
+                .map((lead) => ({
+                    _id: lead?._id,
+                    studentName: getLeadDisplayName(lead),
+                    courseName: lead?._course?.name || lead?.courseName || 'Not specified',
+                    centerName: getLeadCenterName(lead),
+                    counselorName: getLeadCounselorName(lead),
+                    batchName: getLeadBatchName(lead) || 'Unassigned',
+                    admissionDate: lead?.admissionDate || null,
+                    feeStatus: lead?.registrationFee || 'Unknown',
+                    dropout: !!lead?.dropout,
+                }))
+                .sort((a, b) => {
+                    const dateA = a.admissionDate ? new Date(a.admissionDate).getTime() : 0;
+                    const dateB = b.admissionDate ? new Date(b.admissionDate).getTime() : 0;
+                    return dateB - dateA;
+                }),
+            topRiskLeads: riskLeads
+                .filter((lead) => lead.riskScore > 0)
+                .sort((a, b) => b.riskScore - a.riskScore)
+                .slice(0, 5),
+        };
+    }, [aiScopedLeads]);
+
+    const aiSupervisionQueue = useMemo(() => {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const queue = aiScopedLeads.flatMap((lead) => {
+            const documentSnapshot = getLeadDocumentSnapshot(lead);
+            const followupSummary = getLeadFollowupSummary(lead);
+            const leadName = getLeadDisplayName(lead);
+            const courseName = lead?._course?.name || lead?.courseName || 'Not specified';
+            const centerName = getLeadCenterName(lead);
+            const counselorName = getLeadCounselorName(lead);
+            const batchName = getLeadBatchName(lead) || 'Unassigned';
+            const contactNumbers = getLeadContactNumbers(lead);
+            const followupDate = lead?.followupDate || null;
+            const isOverdue = followupDate ? new Date(followupDate) < todayStart : false;
+            const rows = [];
+
+            const pushItem = (type, severity, label, reason, action, extra = {}) => {
+                rows.push({
+                    _id: `${lead?._id}-${type}`,
+                    leadId: lead?._id,
+                    type,
+                    severity,
+                    label,
+                    reason,
+                    action,
+                    studentName: leadName,
+                    courseName,
+                    centerName,
+                    counselorName,
+                    contactNumbers,
+                    followupDate,
+                    admissionDate: lead?.admissionDate || null,
+                    feeStatus: lead?.registrationFee || 'Unknown',
+                    batchName,
+                    kycBucket: documentSnapshot.category,
+                    followupAttempts: followupSummary.totalAttempts,
+                    followupSufficiency: followupSummary.sufficiency,
+                    sourceStatus: lead?._leadStatus?.title || lead?.leadStatus || 'Unknown',
+                    ...extra,
+                });
+            };
+
+            if (documentSnapshot.rejectedDocs > 0) {
+                pushItem(
+                    'kycRejected',
+                    'High',
+                    'KYC Rejected',
+                    `${documentSnapshot.rejectedDocs} rejected document(s) need fresh upload or correction.`,
+                    'Call the student, explain the rejection reason, and ask for corrected documents today.',
+                    { pendingDocs: documentSnapshot.pendingDocs, rejectedDocs: documentSnapshot.rejectedDocs }
+                );
+            }
+
+            if (documentSnapshot.pendingVerificationDocs > 0) {
+                pushItem(
+                    'kycPendingVerification',
+                    'Medium',
+                    'Pending Verification',
+                    `${documentSnapshot.pendingVerificationDocs} document(s) are uploaded but waiting for review.`,
+                    'Prioritize document verification so the student can move to the next stage.',
+                    { pendingDocs: documentSnapshot.pendingDocs, rejectedDocs: documentSnapshot.rejectedDocs }
+                );
+            }
+
+            if (!lead?.kyc && !documentSnapshot.hasAnyUploads) {
+                pushItem(
+                    'kycNoUpload',
+                    'Medium',
+                    'No KYC Upload',
+                    'No document upload found for this lead.',
+                    'Send a document checklist and take follow-up on upload completion.'
+                );
+            }
+
+            if ((lead?.admissionDone || lead?.admissionDate) && lead?.registrationFee !== 'Paid') {
+                pushItem(
+                    'admissionUnpaid',
+                    'High',
+                    'Admission Unpaid',
+                    'Admission is marked, but the registration fee is still not paid.',
+                    'Take fee follow-up and confirm payment proof before batch movement.'
+                );
+            }
+
+            if ((lead?.admissionDone || lead?.admissionDate) && !getLeadBatchName(lead)) {
+                pushItem(
+                    'admissionNoBatch',
+                    'Medium',
+                    'Batch Not Assigned',
+                    'Student admission exists, but no batch is assigned.',
+                    'Assign batch quickly to avoid post-admission drop-off.'
+                );
+            }
+
+            if (lead?.dropout) {
+                pushItem(
+                    'dropoutRisk',
+                    'High',
+                    'Dropout',
+                    'Student is already marked as dropout.',
+                    'Review the dropout reason and identify if recovery or closure is needed.'
+                );
+            }
+
+            if (isOverdue) {
+                pushItem(
+                    'overdueFollowup',
+                    'Medium',
+                    'Overdue Follow-up',
+                    'Follow-up date has already passed.',
+                    'Counselor should reconnect with the student and update the next action date.'
+                );
+            }
+
+            if (!lead?.admissionDone && !lead?.dropout && followupSummary.totalAttempts < 2) {
+                pushItem(
+                    'insufficientFollowup',
+                    followupSummary.totalAttempts === 0 ? 'High' : 'Medium',
+                    'Insufficient Follow-up',
+                    `Only ${followupSummary.totalAttempts} follow-up attempt(s) found. Current level: ${followupSummary.sufficiency}.`,
+                    `Necessary steps: ${getLowFollowupActionPlan(lead).join(' ')}`,
+                    {
+                        followupAttempts: followupSummary.totalAttempts,
+                        followupSufficiency: followupSummary.sufficiency,
+                    }
+                );
+            }
+
+            return rows;
+        });
+
+        return queue.sort((a, b) => {
+            const severityOrder = { High: 3, Medium: 2, Low: 1 };
+            const severityDiff = (severityOrder[b.severity] || 0) - (severityOrder[a.severity] || 0);
+            if (severityDiff !== 0) return severityDiff;
+
+            const followupA = a.followupDate ? new Date(a.followupDate).getTime() : 0;
+            const followupB = b.followupDate ? new Date(b.followupDate).getTime() : 0;
+            return followupA - followupB;
+        });
+    }, [aiScopedLeads]);
+
+    const aiQueueCounts = useMemo(() => ({
+        all: aiSupervisionQueue.length,
+        kycRejected: aiSupervisionQueue.filter((item) => item.type === 'kycRejected').length,
+        kycPendingVerification: aiSupervisionQueue.filter((item) => item.type === 'kycPendingVerification').length,
+        kycNoUpload: aiSupervisionQueue.filter((item) => item.type === 'kycNoUpload').length,
+        admissionUnpaid: aiSupervisionQueue.filter((item) => item.type === 'admissionUnpaid').length,
+        admissionNoBatch: aiSupervisionQueue.filter((item) => item.type === 'admissionNoBatch').length,
+        dropoutRisk: aiSupervisionQueue.filter((item) => item.type === 'dropoutRisk').length,
+        overdueFollowup: aiSupervisionQueue.filter((item) => item.type === 'overdueFollowup').length,
+        insufficientFollowup: aiSupervisionQueue.filter((item) => item.type === 'insufficientFollowup').length,
+    }), [aiSupervisionQueue]);
+
+    const filteredAiSupervisionQueue = useMemo(() => {
+        const query = aiSupervisionSearchTerm.trim().toLowerCase();
+        const normalizedQueryDigits = query.replace(/\D/g, '');
+
+        return aiSupervisionQueue.filter((item) => {
+            const matchesFilter = aiSupervisionQueueFilter === 'all' || item.type === aiSupervisionQueueFilter;
+            if (!matchesFilter) return false;
+
+            if (!query) return true;
+
+            const haystack = [
+                item.studentName,
+                item.courseName,
+                item.centerName,
+                item.counselorName,
+                item.label,
+                item.reason,
+                item.action,
+                item.sourceStatus,
+                ...(Array.isArray(item.contactNumbers) ? item.contactNumbers : []),
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            const matchesText = haystack.includes(query);
+            if (matchesText) return true;
+
+            if (!normalizedQueryDigits) return false;
+
+            const contactDigits = (Array.isArray(item.contactNumbers) ? item.contactNumbers : [])
+                .map((value) => String(value).replace(/\D/g, ''))
+                .filter(Boolean);
+
+            return contactDigits.some((digits) => digits.includes(normalizedQueryDigits));
+        });
+    }, [aiSupervisionQueue, aiSupervisionQueueFilter, aiSupervisionSearchTerm]);
+
+    const selectedAiLead = useMemo(() => (
+        filteredData.find((lead) => lead?._id === selectedAiLeadId) || null
+    ), [filteredData, selectedAiLeadId]);
+
+    const aiFilteredLeadOptions = useMemo(() => {
+        const query = aiLeadSearchTerm.trim().toLowerCase();
+
+        const matches = !query
+            ? aiScopedLeads
+            : aiScopedLeads.filter((lead) => {
+                const haystack = [
+                    getLeadDisplayName(lead),
+                    getLeadCenterName(lead),
+                    getLeadCounselorName(lead),
+                    lead?._course?.name,
+                    lead?.courseName,
+                    lead?._leadStatus?.title,
+                    lead?.mobile,
+                    lead?.phone,
+                    lead?.email
+                ]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+
+                return haystack.includes(query);
+            });
+
+        return matches.slice(0, 100).map((lead) => ({
+            value: lead._id,
+            label: `${getLeadDisplayName(lead)} | ${getLeadCenterName(lead)} | ${lead?._course?.name || lead?.courseName || 'No Course'}`
+        }));
+    }, [aiScopedLeads, aiLeadSearchTerm]);
+
+    const generateDailyAiSummary = async () => {
+        try {
+            if (!token || !backendUrl) return;
+            setAiDailySummaryLoading(true);
+            setAiDailySummaryError(null);
+            const dateLabel = useCustomDate && startDate && endDate
+                ? `${new Date(startDate).toLocaleDateString('en-IN')} - ${new Date(endDate).toLocaleDateString('en-IN')}`
+                : (selectedPeriod || 'today');
+
+            const res = await axios.post(
+                `${backendUrl}/api/ai/dashboard-daily-summary`,
+                {
+                    date: dateLabel,
+                    stats: dashboardAiStats,
+                    highlights: [
+                        `Center filter: ${selectedCenter}`,
+                        `Period: ${dateLabel}`
+                    ]
+                },
+                { headers: { 'x-auth': token } }
+            );
+            if (res.data?.success && res.data?.data) {
+                setAiDailySummary(res.data.data);
+            } else {
+                setAiDailySummaryError(res.data?.message || 'Failed to generate AI summary');
+            }
+        } catch (err) {
+            setAiDailySummaryError(err.response?.data?.message || err.message || 'Failed to generate AI summary');
+        } finally {
+            setAiDailySummaryLoading(false);
+        }
+    };
+
+    const generatePriorityLeadInsights = async () => {
+        try {
+            if (!token || !backendUrl) return;
+            if (aiLeadCandidates.length === 0) {
+                setAiLeadIntel([]);
+                setAiLeadIntelError('No registration leads found for the current filters.');
+                return;
+            }
+
+            setAiLeadIntelLoading(true);
+            setAiLeadIntelError(null);
+
+            const res = await axios.post(
+                `${backendUrl}/api/ai/lead-intel/bulk`,
+                { leads: aiLeadCandidates },
+                { headers: { 'x-auth': token } }
+            );
+
+            if (res.data?.success && res.data?.data) {
+                const rankedLeads = aiLeadCandidates
+                    .map((lead) => ({
+                        ...lead,
+                        ...(res.data.data[lead._id] || {}),
+                    }))
+                    .filter((lead) => lead.summary || lead.suggestedAction || typeof lead.score === 'number')
+                    .sort((a, b) => (b.score || 0) - (a.score || 0));
+
+                setAiLeadIntel(rankedLeads);
+            } else {
+                setAiLeadIntel([]);
+                setAiLeadIntelError(res.data?.message || 'Failed to generate AI lead insights');
+            }
+        } catch (err) {
+            setAiLeadIntel([]);
+            setAiLeadIntelError(err.response?.data?.message || err.message || 'Failed to generate AI lead insights');
+        } finally {
+            setAiLeadIntelLoading(false);
+        }
+    };
+
+    const generateDetailedAiLeadProfile = useCallback(async (leadOverride = null) => {
+        try {
+            const targetLead = leadOverride || selectedAiLead;
+            if (!token || !backendUrl || !targetLead) return;
+
+            setAiLeadDetailLoading(true);
+            setAiLeadDetailError(null);
+
+            const leadProfile = buildAiLeadProfile(targetLead);
+            const notes = leadProfile.notes;
+            const lowFollowupActionPlan = getLowFollowupActionPlan(targetLead);
+
+            const [summaryRes, actionsRes] = await Promise.all([
+                axios.post(
+                    `${backendUrl}/api/ai/lead-summary`,
+                    {
+                        leadId: targetLead._id,
+                        leadProfile,
+                        notes,
+                        messages: []
+                    },
+                    { headers: { 'x-auth': token } }
+                ),
+                axios.post(
+                    `${backendUrl}/api/ai/next-best-action`,
+                    {
+                        leadProfile,
+                        notes
+                    },
+                    { headers: { 'x-auth': token } }
+                )
+            ]);
+
+            if (summaryRes.data?.success) {
+                setAiLeadDetail(summaryRes.data.data || null);
+            } else {
+                setAiLeadDetail(null);
+            }
+
+            if (actionsRes.data?.success) {
+                const aiActions = actionsRes.data.data?.actions || [];
+                const mergedActions = lowFollowupActionPlan.length > 0
+                    ? [...lowFollowupActionPlan, ...aiActions]
+                    : aiActions;
+                setAiLeadActions(Array.from(new Set(mergedActions)));
+            } else {
+                setAiLeadActions(lowFollowupActionPlan);
+            }
+        } catch (err) {
+            setAiLeadDetail(null);
+            setAiLeadActions([]);
+            setAiLeadDetailError(err.response?.data?.message || err.message || 'Failed to generate detailed AI lead profile');
+        } finally {
+            setAiLeadDetailLoading(false);
+        }
+    }, [backendUrl, buildAiLeadProfile, selectedAiLead, token]);
+
+    useEffect(() => {
+        if (!pendingAiLeadDetailId || selectedAiLead?._id !== pendingAiLeadDetailId) return;
+
+        generateDetailedAiLeadProfile(selectedAiLead);
+        setPendingAiLeadDetailId(null);
+    }, [generateDetailedAiLeadProfile, pendingAiLeadDetailId, selectedAiLead]);
+
+    const generateKycAiSupervision = async () => {
+        try {
+            if (!token || !backendUrl) return;
+
+            setAiKycSummaryLoading(true);
+            setAiKycSummaryError(null);
+
+            const dateLabel = useCustomDate && startDate && endDate
+                ? `${new Date(startDate).toLocaleDateString('en-IN')} - ${new Date(endDate).toLocaleDateString('en-IN')}`
+                : (selectedPeriod || 'today');
+
+            const highlights = [
+                `Center filter: ${selectedCenter}`,
+                `KYC pending leads: ${kycSupervisorData.stats.kycPending}`,
+                `KYC done leads: ${kycSupervisorData.stats.kycDone}`,
+                `Pending document leads: ${kycSupervisorData.stats.leadsWithPendingDocuments}`,
+                `Rejected document leads: ${kycSupervisorData.stats.leadsWithRejectedDocuments}`,
+                `No upload leads: ${kycSupervisorData.stats.leadsWithoutAnyUploads}`,
+                `Pending verification leads: ${kycSupervisorData.stats.leadsPendingVerification}`,
+                `KYC action queue: ${aiQueueCounts.kycRejected + aiQueueCounts.kycPendingVerification + aiQueueCounts.kycNoUpload}`,
+                ...kycSupervisorData.topRiskLeads.map((lead, index) =>
+                    `Risk lead ${index + 1}: ${lead.name} | ${lead.center} | pending docs=${lead.pendingDocs} | rejected docs=${lead.rejectedDocs}`
+                ),
+                ...filteredAiSupervisionQueue
+                    .filter((item) => item.type.startsWith('kyc'))
+                    .slice(0, 5)
+                    .map((item, index) => `KYC queue ${index + 1}: ${item.studentName} | ${item.courseName} | ${item.label} | ${item.reason}`)
+            ];
+
+            const res = await axios.post(
+                `${backendUrl}/api/ai/dashboard-daily-summary`,
+                {
+                    date: dateLabel,
+                    stats: {
+                        ...kycSupervisorData.stats,
+                        admissions: dashboardAiStats.admissions,
+                        overdueFollowups: dashboardAiStats.overdueFollowups,
+                    },
+                    highlights
+                },
+                { headers: { 'x-auth': token } }
+            );
+
+            if (res.data?.success && res.data?.data) {
+                setAiKycSummary(res.data.data);
+            } else {
+                setAiKycSummary(null);
+                setAiKycSummaryError(res.data?.message || 'Failed to generate AI KYC supervision');
+            }
+        } catch (err) {
+            setAiKycSummary(null);
+            setAiKycSummaryError(err.response?.data?.message || err.message || 'Failed to generate AI KYC supervision');
+        } finally {
+            setAiKycSummaryLoading(false);
+        }
+    };
+
+    const generateAdmissionAiSupervision = async () => {
+        try {
+            if (!token || !backendUrl) return;
+
+            setAiAdmissionSummaryLoading(true);
+            setAiAdmissionSummaryError(null);
+
+            const dateLabel = useCustomDate && startDate && endDate
+                ? `${new Date(startDate).toLocaleDateString('en-IN')} - ${new Date(endDate).toLocaleDateString('en-IN')}`
+                : (selectedPeriod || 'today');
+
+            const highlights = [
+                `Center filter: ${selectedCenter}`,
+                `Total admitted: ${admissionSupervisorData.stats.totalAdmitted}`,
+                `Paid admissions: ${admissionSupervisorData.stats.paidAdmissions}`,
+                `Unpaid admissions: ${admissionSupervisorData.stats.unpaidAdmissions}`,
+                `Dropouts: ${admissionSupervisorData.stats.dropouts}`,
+                `No batch assigned: ${admissionSupervisorData.stats.noBatchAssigned}`,
+                `No branch assigned: ${admissionSupervisorData.stats.noBranchAssigned}`,
+                `Missing admission date: ${admissionSupervisorData.stats.missingAdmissionDate}`,
+                `Admission action queue: ${aiQueueCounts.admissionUnpaid + aiQueueCounts.admissionNoBatch + aiQueueCounts.dropoutRisk}`,
+                ...admissionSupervisorData.courseBreakdown.map((course, index) =>
+                    `Course ${index + 1}: ${course.courseName} | admissions=${course.totalAdmitted} | paid=${course.paidAdmissions} | unpaid=${course.unpaidAdmissions} | dropouts=${course.dropouts} | no batch=${course.noBatchAssigned}`
+                ),
+                ...admissionSupervisorData.topRiskLeads.map((lead, index) =>
+                    `Admission risk ${index + 1}: ${lead.name} | ${lead.center} | batch=${lead.batchName} | paid=${lead.isPaid ? 'yes' : 'no'} | dropout=${lead.isDropout ? 'yes' : 'no'}`
+                ),
+                ...filteredAiSupervisionQueue
+                    .filter((item) => ['admissionUnpaid', 'admissionNoBatch', 'dropoutRisk'].includes(item.type))
+                    .slice(0, 5)
+                    .map((item, index) => `Admission queue ${index + 1}: ${item.studentName} | ${item.courseName} | ${item.label} | ${item.reason}`)
+            ];
+
+            const res = await axios.post(
+                `${backendUrl}/api/ai/dashboard-daily-summary`,
+                {
+                    date: dateLabel,
+                    stats: {
+                        totalLeads: admissionSupervisorData.stats.totalAdmitted,
+                        kycPending: admissionSupervisorData.stats.unpaidAdmissions,
+                        kycDone: admissionSupervisorData.stats.paidAdmissions,
+                        admissions: admissionSupervisorData.stats.totalAdmitted,
+                        overdueFollowups: admissionSupervisorData.stats.noBatchAssigned + admissionSupervisorData.stats.noBranchAssigned,
+                    },
+                    highlights
+                },
+                { headers: { 'x-auth': token } }
+            );
+
+            if (res.data?.success && res.data?.data) {
+                setAiAdmissionSummary(res.data.data);
+            } else {
+                setAiAdmissionSummary(null);
+                setAiAdmissionSummaryError(res.data?.message || 'Failed to generate AI admission supervision');
+            }
+        } catch (err) {
+            setAiAdmissionSummary(null);
+            setAiAdmissionSummaryError(err.response?.data?.message || err.message || 'Failed to generate AI admission supervision');
+        } finally {
+            setAiAdmissionSummaryLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!selectedAiLeadId && aiScopedLeads.length > 0) {
+            setSelectedAiLeadId(aiScopedLeads[0]._id);
+        }
+        if (selectedAiLeadId && !aiScopedLeads.some((lead) => lead?._id === selectedAiLeadId)) {
+            setSelectedAiLeadId(aiScopedLeads[0]?._id || '');
+            setAiLeadDetail(null);
+            setAiLeadActions([]);
+        }
+    }, [aiScopedLeads, selectedAiLeadId]);
+
+    // Get daily admissions data
+    const getDailyAdmissions = () => {
+        const admissionsByDate = {};
+
+        // Use filtered data from backend and apply center filter
+        let admissionsToProcess = filteredData.filter(lead => lead && lead.admissionDone && lead.admissionDate);
+
+        // Apply center filter if selected
+        if (selectedCenter !== 'all') {
+            admissionsToProcess = admissionsToProcess.filter(lead => lead._center && lead._center.name === selectedCenter);
+        }
+
+        admissionsToProcess.forEach(lead => {
+            if (!lead.admissionDate) return;
+
+            const dateStr = new Date(lead.admissionDate).toLocaleDateString('en-IN');
+            if (!admissionsByDate[dateStr]) {
+                admissionsByDate[dateStr] = {
+                    date: dateStr,
+                    admissions: 0,
+                    revenue: 0,
+                    centers: {},
+                    counselors: {}
+                };
+            }
+
+            admissionsByDate[dateStr].admissions++;
+            if (lead.registrationFee === 'Paid') {
+                admissionsByDate[dateStr].revenue += 15000;
+            }
+
+            // Track by center
+            const centerName = lead._center?.name || 'Unknown';
+            if (!admissionsByDate[dateStr].centers[centerName]) {
+                admissionsByDate[dateStr].centers[centerName] = 0;
+            }
+            admissionsByDate[dateStr].centers[centerName]++;
+
+            // Track by counselor
+            if (lead.leadAssignment && lead.leadAssignment.length > 0) {
+                const counselorName = lead.leadAssignment[lead.leadAssignment.length - 1].counsellorName;
+                if (!admissionsByDate[dateStr].counselors[counselorName]) {
+                    admissionsByDate[dateStr].counselors[counselorName] = 0;
+                }
+                admissionsByDate[dateStr].counselors[counselorName]++;
+            }
+        });
+
+        // Convert to array and sort by date
+        const sortedAdmissions = Object.values(admissionsByDate).sort((a, b) => {
+            const dateA = new Date(a.date.split('/').reverse().join('-'));
+            const dateB = new Date(b.date.split('/').reverse().join('-'));
+            return dateB - dateA;
+        });
+
+        return sortedAdmissions;
+    };
+
+    // Get counselor-status matrix from actual data
+    const [expandedStatus, setExpandedStatus] = useState(null);
+    const [allStatuses, setAllStatuses] = useState([]);
+    const [allSubstatuses, setAllSubstatuses] = useState({});
+
+    useEffect(() => {
+        if (appliedCoursesData && appliedCoursesData.length > 0) {
+            const statuses = new Set();
+            const substatusMap = {};
+            appliedCoursesData.forEach(lead => {
+                const status = (lead._leadStatus?.title || '').trim();
+                if (status) {
+                    statuses.add(status);
+                    if (!substatusMap[status]) substatusMap[status] = new Set();
+                    if (Array.isArray(lead._leadStatus?.substatuses)) {
+                        lead._leadStatus.substatuses.forEach(sub => {
+                            if (sub?.title) substatusMap[status].add(sub.title);
+                        });
+                    }
+                }
+            });
+            setAllStatuses([...statuses]);
+            // Convert substatus sets to arrays
+            const subMap = {};
+            Object.keys(substatusMap).forEach(status => {
+                subMap[status] = Array.from(substatusMap[status]);
+            });
+            setAllSubstatuses(subMap);
+        } else {
+            setAllStatuses([]);
+            setAllSubstatuses({});
+        }
+    }, [appliedCoursesData]);
+
+    const getCounselorMatrix = () => {
+        const matrix = {};
+        // Filter leads based on selected center
+        const centerFilteredLeads = selectedCenter === 'all'
+            ? filteredData
+            : filteredData.filter(lead => lead._center && lead._center.name === selectedCenter);
+        // Process each lead
+        centerFilteredLeads.forEach(lead => {
+            if (lead.leadAssignment && lead.leadAssignment.length > 0) {
+                // Get the latest counselor assignment
+                const latestAssignment = lead.leadAssignment[lead.leadAssignment.length - 1];
+                const counselorName = latestAssignment.counsellorName;
+                if (!matrix[counselorName]) {
+                    matrix[counselorName] = {
+                        Total: 0,
+                        KYCDone: 0,
+                        KYCStage: 0,
+                        Admissions: 0,
+                        Dropouts: 0,
+                        Paid: 0,
+                        Unpaid: 0,
+                        ConversionRate: 0,
+                        DropoutRate: 0,
+                        // Status and substatus counts will be added dynamically
+                    };
+                }
+                // Count by status
+                const status = (lead._leadStatus?.title || 'Unknown').trim();
+                if (!matrix[counselorName][status]) matrix[counselorName][status] = { count: 0, substatuses: {} };
+                matrix[counselorName][status].count++;
+                matrix[counselorName].Total++;
+                // Count by substatus
+                if (Array.isArray(lead._leadStatus?.substatuses) && lead._leadStatus.substatuses.length > 0) {
+                    const sub = lead._leadStatus.substatuses[0];
+                    if (sub?.title) {
+                        if (!matrix[counselorName][status].substatuses[sub.title]) matrix[counselorName][status].substatuses[sub.title] = 0;
+                        matrix[counselorName][status].substatuses[sub.title]++;
+                    }
+                }
+                // KYC metrics
+                if (lead.kycStage) matrix[counselorName].KYCStage++;
+                if (lead.kyc) matrix[counselorName].KYCDone++;
+                // Admission and dropout metrics
+                if (lead.admissionDone) matrix[counselorName].Admissions++;
+                if (lead.dropout) matrix[counselorName].Dropouts++;
+                // Payment metrics
+                if (lead.registrationFee === 'Paid') matrix[counselorName].Paid++;
+                else matrix[counselorName].Unpaid++;
+            }
+        });
+        // Calculate rates
+        Object.keys(matrix).forEach(counselor => {
+            const data = matrix[counselor];
+            data.ConversionRate = data.Total > 0 ? ((data.Admissions / data.Total) * 100).toFixed(1) : 0;
+            data.DropoutRate = data.Total > 0 ? ((data.Dropouts / data.Total) * 100).toFixed(1) : 0;
+        });
+        return matrix;
+    };
+
+    // Get center-wise analytics
+    const getCenterAnalytics = () => {
+        const centerData = {};
+
+        // Apply center filter if selected
+        let dataToProcess = filteredData;
+        if (selectedCenter !== 'all') {
+            dataToProcess = filteredData.filter(lead => lead._center && lead._center.name === selectedCenter);
+        }
+
+        dataToProcess.forEach(lead => {
+            const centerName = lead._center?.name || 'Unknown';
+
+            if (!centerData[centerName]) {
+                centerData[centerName] = {
+                    totalLeads: 0,
+                    assigned: 0,
+                    due: 0,
+                    kyc: 0,
+                    admissions: 0,
+                    dropouts: 0,
+                    revenue: 0,
+                    counselors: {},
+                    statusCounts: {}
+                };
+            }
+
+            centerData[centerName].totalLeads++;
+
+            // Count by actual status from database
+            const status = (lead._leadStatus?.title || 'Unknown').trim();
+            if (!centerData[centerName].statusCounts[status]) {
+                centerData[centerName].statusCounts[status] = 0;
+            }
+            centerData[centerName].statusCounts[status]++;
+
+            if (lead.courseStatus === 1) centerData[centerName].assigned++;
+            else centerData[centerName].due++;
+
+            if (lead.kyc) centerData[centerName].kyc++;
+            if (lead.admissionDone) centerData[centerName].admissions++;
+            if (lead.dropout) centerData[centerName].dropouts++;
+            if (lead.registrationFee === 'Paid') centerData[centerName].revenue += 15000; // Assuming 15000 per registration
+
+            // Track counselor performance per center
+            if (lead.leadAssignment && lead.leadAssignment.length > 0) {
+                const counselor = lead.leadAssignment[lead.leadAssignment.length - 1].counsellorName;
+
+                if (!centerData[centerName].counselors[counselor]) {
+                    centerData[centerName].counselors[counselor] = {
+                        leads: 0,
+                        admissions: 0,
+                        dropouts: 0,
+                        kyc: 0
+                    };
+                }
+
+                centerData[centerName].counselors[counselor].leads++;
+                if (lead.admissionDone) centerData[centerName].counselors[counselor].admissions++;
+                if (lead.dropout) centerData[centerName].counselors[counselor].dropouts++;
+                if (lead.kyc) centerData[centerName].counselors[counselor].kyc++;
+            }
+        });
+
+        return centerData;
+    };
+
+    // Get followup analytics
+    const getFollowupAnalytics = () => {
+        let totalFollowups = 0;
+        let doneFollowups = 0;
+        let missedFollowups = 0;
+        let plannedFollowups = 0;
+
+        // Apply center filter if selected
+        let dataToProcess = filteredData;
+        if (selectedCenter !== 'all') {
+            dataToProcess = filteredData.filter(lead => lead._center && lead._center.name === selectedCenter);
+        }
+
+        dataToProcess.forEach(lead => {
+            if (lead && lead.followups && Array.isArray(lead.followups) && lead.followups.length > 0) {
+                lead.followups.forEach(followup => {
+                    if (followup && followup.status) {
+                        totalFollowups++;
+                        if (followup.status === 'Done') doneFollowups++;
+                        else if (followup.status === 'Missed') missedFollowups++;
+                        else if (followup.status === 'Planned') plannedFollowups++;
+                    }
+                });
+            }
+        });
+
+        return { totalFollowups, doneFollowups, missedFollowups, plannedFollowups };
+    };
+
+    const counselorMatrix = getCounselorMatrix();
+    const centerAnalytics = getCenterAnalytics();
+    const followupStats = getFollowupAnalytics();
+    const dailyAdmissions = getDailyAdmissions();
+
+    // Prepare chart data
+    const conversionChartData = Object.entries(counselorMatrix).map(([name, data]) => ({
+        name,
+        conversionRate: parseFloat(data.ConversionRate),
+        dropoutRate: parseFloat(data.DropoutRate)
+    }));
+
+    // Create status distribution from actual data
+    const statusCounts = {};
+
+    // Apply center filter if selected
+    let dataToProcess = filteredData;
+    if (selectedCenter !== 'all') {
+        dataToProcess = filteredData.filter(lead => lead._center && lead._center.name === selectedCenter);
+    }
+
+    dataToProcess.forEach(lead => {
+        const status = (lead._leadStatus?.title || 'Unknown').trim();
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    const statusDistribution = Object.entries(statusCounts).map(([status, count]) => ({
+        name: status,
+        value: count
+    }));
+
+    // Generate colors for different statuses
+    const generateColors = (statuses) => {
+        const colorPalette = [
+            '#dc2626', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6',
+            '#ef4444', '#f97316', '#06b6d4', '#84cc16', '#ec4899'
+        ];
+        const colors = {};
+        statuses.forEach((status, index) => {
+            colors[status] = colorPalette[index % colorPalette.length];
+        });
+        return colors;
+    };
+
+    const colors = generateColors(statusDistribution.map(s => s.name));
+
+    // Prepare daily admissions chart data (last 7 days)
+    const admissionTrendData = dailyAdmissions.slice(0, 7).reverse().map(day => ({
+        date: day.date,
+        admissions: day.admissions,
+        revenue: day.revenue / 1000 // in thousands
+    }));
+
+    function getSubstatusTotal(data, status, substatuses) {
+        if (!data[status] || !data[status].substatuses) return 0;
+        return substatuses.reduce((sum, sub) => sum + (data[status].substatuses[sub] || 0), 0);
+    }
+
+    const getCourseWiseDocStats = () => {
+        const courseStats = {};
+        filteredData.forEach(lead => {
+            const courseName = lead._course?.name || 'Unknown';
+            if (!courseStats[courseName]) {
+                courseStats[courseName] = {
+                    totalLeads: 0,
+                    docsPending: 0,
+                    docsVerified: 0
+                };
+            }
+            courseStats[courseName].totalLeads++;
+            // Count docs for this lead
+            if (Array.isArray(lead.uploadedDocs)) {
+                lead.uploadedDocs.forEach(doc => {
+                    if (doc.status === 'Verified') courseStats[courseName].docsVerified++;
+                    else if (doc.status === 'Pending' || doc.status === 'Not Uploaded') courseStats[courseName].docsPending++;
+                });
+            }
+        });
+        return courseStats;
+    };
+
+    const getCourseWisePendingDocs = () => {
+        const courseDocs = {};
+        filteredData.forEach(lead => {
+            const courseName = lead._course?.name || 'Unknown';
+            if (!courseDocs[courseName]) courseDocs[courseName] = {};
+            if (Array.isArray(lead.uploadedDocs)) {
+                lead.uploadedDocs.forEach(doc => {
+                    if (doc.status === 'Pending' || doc.status === 'Not Uploaded') {
+                        const docName = doc.Name || 'Unknown Document';
+                        if (!courseDocs[courseName][docName]) courseDocs[courseName][docName] = 0;
+                        courseDocs[courseName][docName]++;
+                    }
+                });
+            }
+        });
+        return courseDocs;
+    };
+
+    // ====== NEW: Course-Counsellor Status Table ======
+    const getCourseCounsellorStatusMatrix = () => {
+        // Group data by course, then by counsellor
+        const matrix = {};
+        filteredData.forEach(lead => {
+            const course = lead._course?.name || 'Unknown';
+            let counsellor = 'Unknown';
+            if (lead.leadAssignment && lead.leadAssignment.length > 0) {
+                counsellor = lead.leadAssignment[lead.leadAssignment.length - 1].counsellorName;
+            }
+            if (!matrix[course]) matrix[course] = {};
+            if (!matrix[course][counsellor]) {
+                matrix[course][counsellor] = {
+                    'Pending for KYC': 0,
+                    'KYC Done': 0,
+                    'Admission Done': 0,
+                    'Batch Assigned': 0,
+                    'In Zero Period': 0,
+                    'In Batch Freezed': 0,
+                    'DropOut': 0
+                };
+            }
+            // Status mapping logic (customize as per your data)
+            if (!lead.kyc && lead.kycStage) matrix[course][counsellor]['Pending for KYC']++;
+            if (lead.kyc) matrix[course][counsellor]['KYC Done']++;
+            // Admission Done: count only if admissionDate exists
+            if (lead.admissionDate) matrix[course][counsellor]['Admission Done']++;
+            if (lead.batchAssigned) matrix[course][counsellor]['Batch Assigned']++;
+            if (lead.inZeroPeriod) matrix[course][counsellor]['In Zero Period']++;
+            if (lead.inBatchFreezed) matrix[course][counsellor]['In Batch Freezed']++;
+            if (lead.dropout) matrix[course][counsellor]['DropOut']++;
+        });
+        return matrix;
+    };
+
+    const [drilldown, setDrilldown] = useState({
+        open: false,
+        loading: false,
+        leads: [],
+        group: null,
+        statusType: '',
+        statusLabel: '',
+    });
+
+
+    // ====== NEW: Course-Counsellor Status Table (API Integrated) ======
+    const [counsellorStatusData, setCounsellorStatusData] = useState([]);
+    const [counsellorStatusLoading, setCounsellorStatusLoading] = useState(true);
+    const [counsellorStatusError, setCounsellorStatusError] = useState(null);
+
+    // Date filter state for counsellor status table
+    const [counsellorStatusDateFrom, setCounsellorStatusDateFrom] = useState('');
+    const [counsellorStatusDateTo, setCounsellorStatusDateTo] = useState('');
+    const [showAllTime, setShowAllTime] = useState(false);
+    const [showCounsellorDatePicker, setShowCounsellorDatePicker] = useState(false);
+
+    // Transform API data into nested structure: Course > Center > Counsellor
+    const groupedStatusData = useMemo(() => {
+        const grouped = {};
+        counsellorStatusData.forEach(row => {
+            if (!row.courseName) row.courseName = 'Unknown';
+            if (!row.centerName) row.centerName = 'Unknown';
+            if (!row.counsellorName) row.counsellorName = 'Unknown';
+            if (!grouped[row.courseName]) grouped[row.courseName] = {};
+            if (!grouped[row.courseName][row.centerName]) grouped[row.courseName][row.centerName] = [];
+            grouped[row.courseName][row.centerName].push(row);
+        });
+        return grouped;
+    }, [counsellorStatusData]);
+
+    // Function to fetch counsellor status data with date filters
+    const fetchCounsellorStatusData = async (dateFrom = '', dateTo = '', showAllTime = false) => {
+        setDrilldown({ open: false, loading: false, leads: [], group: null, statusType: '', statusLabel: '' });
+        setCounsellorStatusLoading(true);
+        setCounsellorStatusError(null);
+
+        try {
+            const params = new URLSearchParams();
+            if (showAllTime) {
+                params.append('allTime', 'true');
+            } else if (dateFrom && dateTo) {
+                params.append('dateFrom', dateFrom);
+                params.append('dateTo', dateTo);
+            }
+
+            const url = `${backendUrl}/college/counsellor-status-table${params.toString() ? '?' + params.toString() : ''}`;
+
+            const res = await axios.get(url, {
+                headers: {
+                    'x-auth': token
+                }
+            });
+
+            setCounsellorStatusData(res.data.data || []);
+            setCounsellorStatusLoading(false);
+        } catch (err) {
+            setCounsellorStatusError('Failed to load counsellor status table');
+            setCounsellorStatusLoading(false);
+            console.error('Error fetching counsellor status data:', err);
+        }
+    };
+
+    // Function to handle date filter changes
+    const handleCounsellorStatusDateFilter = () => {
+        fetchCounsellorStatusData(counsellorStatusDateFrom, counsellorStatusDateTo, false);
+    };
+
+    // Function to show all time data
+    const showAllTimeData = () => {
+        setCounsellorStatusDateFrom('');
+        setCounsellorStatusDateTo('');
+        setShowAllTime(true);
+        fetchCounsellorStatusData('', '', true);
+    };
+
+    // Function to clear date filters
+    const clearCounsellorStatusDateFilter = () => {
+        setCounsellorStatusDateFrom('');
+        setCounsellorStatusDateTo('');
+        setShowAllTime(false);
+        fetchCounsellorStatusData();
+    };
+
+    // Function to handle date selection from modern date picker
+    const handleCounsellorDateSelect = (startDate, endDate) => {
+        setCounsellorStatusDateFrom(startDate);
+        setCounsellorStatusDateTo(endDate);
+        setShowAllTime(false);
+        fetchCounsellorStatusData(startDate, endDate, false);
+    };
+
+    useEffect(() => {
+        fetchCounsellorStatusData();
+    }, []);
+
+    // Modern Date Picker Component for Counsellor Status Table
+    const ModernDatePicker = ({ isOpen, onClose, onDateSelect }) => {
+        const [currentMonth, setCurrentMonth] = useState(new Date());
+        const [selectedStartDate, setSelectedStartDate] = useState(null);
+        const [selectedEndDate, setSelectedEndDate] = useState(null);
+        const [selectedQuickRange, setSelectedQuickRange] = useState('custom');
+
+        const today = new Date();
+
+        const quickRanges = [
+            { id: 'today', label: 'Today' },
+            { id: 'yesterday', label: 'Yesterday' },
+            { id: 'todayYesterday', label: 'Today and yesterday' },
+            { id: 'last7', label: 'Last 7 days' },
+            { id: 'last14', label: 'Last 14 days' },
+            { id: 'last28', label: 'Last 28 days' },
+            { id: 'last30', label: 'Last 30 days' },
+            { id: 'thisWeek', label: 'This week' },
+            { id: 'thisMonth', label: 'This month' },
+            { id: 'lastMonth', label: 'Last month' },
+            { id: 'maximum', label: 'Maximum' },
+            { id: 'custom', label: 'Custom' }
+        ];
+
+        const getDaysInMonth = (date) => {
+            return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+        };
+
+        const getFirstDayOfMonth = (date) => {
+            return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+        };
+
+        const formatDate = (date) => {
+            return date.toISOString().split('T')[0];
+        };
+
+        const formatDisplayDate = (date) => {
+            return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        };
+
+        const getQuickRangeDates = (rangeId) => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let startDate = new Date(today);
+            let endDate = new Date(today);
+
+            switch (rangeId) {
+                case 'today':
+                    return { startDate, endDate };
+                case 'yesterday':
+                    startDate.setDate(today.getDate() - 1);
+                    endDate = new Date(startDate);
+                    return { startDate, endDate };
+                case 'todayYesterday':
+                    startDate.setDate(today.getDate() - 1);
+                    return { startDate, endDate };
+                case 'last7':
+                    startDate.setDate(today.getDate() - 6);
+                    return { startDate, endDate };
+                case 'last14':
+                    startDate.setDate(today.getDate() - 13);
+                    return { startDate, endDate };
+                case 'last28':
+                    startDate.setDate(today.getDate() - 27);
+                    return { startDate, endDate };
+                case 'last30':
+                    startDate.setDate(today.getDate() - 29);
+                    return { startDate, endDate };
+                case 'thisWeek':
+                    startDate.setDate(today.getDate() - today.getDay());
+                    return { startDate, endDate };
+                case 'thisMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    return { startDate, endDate };
+                case 'lastMonth':
+                    startDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    endDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                    return { startDate, endDate };
+                case 'maximum':
+                    startDate = new Date('2020-01-01');
+                    return { startDate, endDate };
+                default:
+                    return { startDate: null, endDate: null };
+            }
+        };
+
+        const handleQuickRangeSelect = (rangeId) => {
+            setSelectedQuickRange(rangeId);
+            if (rangeId !== 'custom') {
+                const { startDate, endDate } = getQuickRangeDates(rangeId);
+                setSelectedStartDate(startDate);
+                setSelectedEndDate(endDate);
+            } else {
+                setSelectedStartDate(null);
+                setSelectedEndDate(null);
+            }
+        };
+
+        const isDateInRange = (date) => {
+            if (!selectedStartDate || !selectedEndDate) return false;
+            const checkDate = new Date(date);
+            return checkDate >= selectedStartDate && checkDate <= selectedEndDate;
+        };
+
+        const isDateSelected = (date) => {
+            const checkDate = new Date(date);
+            return (selectedStartDate && formatDate(checkDate) === formatDate(selectedStartDate)) ||
+                (selectedEndDate && formatDate(checkDate) === formatDate(selectedEndDate));
+        };
+
+        const handleDateClick = (day) => {
+            const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+
+            if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
+                setSelectedStartDate(clickedDate);
+                setSelectedEndDate(null);
+                setSelectedQuickRange('custom');
+            } else {
+                if (clickedDate >= selectedStartDate) {
+                    setSelectedEndDate(clickedDate);
+                    setSelectedQuickRange('custom');
+                } else {
+                    setSelectedStartDate(clickedDate);
+                    setSelectedEndDate(selectedStartDate);
+                    setSelectedQuickRange('custom');
+                }
+            }
+        };
+
+        const handleApply = () => {
+            if (selectedStartDate && selectedEndDate) {
+                onDateSelect(formatDate(selectedStartDate), formatDate(selectedEndDate));
+                onClose();
+            }
+        };
+
+        const handleCancel = () => {
+            setSelectedStartDate(null);
+            setSelectedEndDate(null);
+            setSelectedQuickRange('custom');
+            onClose();
+        };
+
+        const renderCalendar = () => {
+            const daysInMonth = getDaysInMonth(currentMonth);
+            const firstDay = getFirstDayOfMonth(currentMonth);
+            const days = [];
+
+            // Add empty cells for days before the first day of the month
+            for (let i = 0; i < firstDay; i++) {
+                days.push(<td key={`empty-${i}`} className="p-1"></td>);
+            }
+
+            // Add days of the month
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                const isToday = formatDate(date) === formatDate(today);
+                const isFuture = date > today;
+                const isInRange = isDateInRange(date);
+                const isSelected = isDateSelected(date);
+
+                let className = "p-1 text-center";
+                let buttonClassName = "w-100 h-100 border-0 rounded d-flex align-items-center justify-content-center";
+                let buttonStyle = { minHeight: '32px', minWidth: '32px' };
+
+                if (isFuture) {
+                    buttonClassName += " text-muted bg-transparent";
+                } else if (isToday) {
+                    buttonClassName += " text-primary fw-bold bg-transparent";
+                } else if (isSelected) {
+                    buttonClassName += " bg-primary text-white";
+                } else if (isInRange) {
+                    buttonClassName += " bg-primary bg-opacity-25 text-primary";
+                } else {
+                    buttonClassName += " bg-transparent hover:bg-light";
+                }
+
+                days.push(
+                    <td key={day} className={className}>
+                        <button
+                            className={buttonClassName}
+                            onClick={() => !isFuture && handleDateClick(day)}
+                            disabled={isFuture}
+                            style={buttonStyle}
+                        >
+                            {day}
+                        </button>
+                    </td>
+                );
+            }
+
+            return days;
+        };
+
+        if (!isOpen) return null;
+
+        return (
+            <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+                style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+                <div className="bg-white rounded-lg shadow-lg" style={{ maxWidth: '700px', width: '95%' }}>
+                    <div className="d-flex justify-content-between align-items-center p-3 border-bottom">
+                        <h5 className="mb-0">Select Date Range</h5>
+                        <button className="btn-close" onClick={onClose}></button>
+                    </div>
+
+                    <div className="d-flex">
+                        {/* Left Panel - Quick Select Options */}
+                        <div className="border-end p-3" style={{ width: '180px', backgroundColor: '#f8f9fa' }}>
+                            <h6 className="mb-3 small fw-bold">Quick Select</h6>
+                            <div className="d-flex flex-column gap-1">
+                                {quickRanges.map((range) => (
+                                    <div key={range.id} className="form-check">
+                                        <input
+                                            className="form-check-input"
+                                            type="radio"
+                                            name="quickRange"
+                                            id={range.id}
+                                            checked={selectedQuickRange === range.id}
+                                            onChange={() => handleQuickRangeSelect(range.id)}
+                                        />
+                                        <label className="form-check-label small" htmlFor={range.id}>
+                                            {range.label}
+                                        </label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Right Panel - Calendar */}
+                        <div className="flex-grow-1 p-3">
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <button
+                                    className="btn btn-sm btn-outline-secondary"
+                                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                                >
+                                    ←
+                                </button>
+                                <h6 className="mb-0">
+                                    {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                                </h6>
+                                <button
+                                    className="btn btn-sm btn-outline-secondary"
+                                    onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                                    disabled={currentMonth.getMonth() === today.getMonth() && currentMonth.getFullYear() === today.getFullYear()}
+                                >
+                                    →
+                                </button>
+                            </div>
+
+                            <table className="w-100 table table-borderless">
+                                <thead>
+                                    <tr>
+                                        <th className="p-1 text-center text-muted small fw-normal">Sun</th>
+                                        <th className="p-1 text-center text-muted small fw-normal">Mon</th>
+                                        <th className="p-1 text-center text-muted small fw-normal">Tue</th>
+                                        <th className="p-1 text-center text-muted small fw-normal">Wed</th>
+                                        <th className="p-1 text-center text-muted small fw-normal">Thu</th>
+                                        <th className="p-1 text-center text-muted small fw-normal">Fri</th>
+                                        <th className="p-1 text-center text-muted small fw-normal">Sat</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(() => {
+                                        const allDays = renderCalendar();
+                                        const weeks = [];
+                                        for (let i = 0; i < allDays.length; i += 7) {
+                                            weeks.push(allDays.slice(i, i + 7));
+                                        }
+                                        return weeks.map((week, weekIndex) => (
+                                            <tr key={weekIndex}>
+                                                {week}
+                                            </tr>
+                                        ));
+                                    })()}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Bottom Section */}
+                    <div className="border-top p-3">
+                        <div className="d-flex justify-content-between align-items-center">
+                            <div className="d-flex align-items-center gap-2">
+                                <span className="text-muted small">Selected Range:</span>
+                                <span className="fw-bold small">
+                                    {selectedStartDate && selectedEndDate
+                                        ? `${formatDisplayDate(selectedStartDate)} - ${formatDisplayDate(selectedEndDate)}`
+                                        : 'No date range selected'
+                                    }
+                                </span>
+                            </div>
+                            <div className="d-flex gap-2">
+                                <button className="btn btn-outline-secondary btn-sm" onClick={handleCancel}>
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={handleApply}
+                                    disabled={!selectedStartDate || !selectedEndDate}
+                                >
+                                    Update
+                                </button>
+                            </div>
+                        </div>
+                        <div className="mt-2">
+                            <small className="text-muted">Dates are shown in local timezone</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // Add a new function to fetch lead details by IDs
+    const fetchLeadDetailsByIds = async (ids, statusLabel) => {
+        setDrilldown({ open: true, loading: true, leads: [], group: null, statusType: '', statusLabel });
+        try {
+
+            const res = await axios.post(`${backendUrl}/college/lead-details-by-ids`, { ids }, { headers: { 'x-auth': token } });
+            console.log(res, 'res')
+            // const res = await axios.get(url, { headers: { 'x-auth': token } });
+            setDrilldown(prev => ({ ...prev, loading: false, leads: res.data.data || [] }));
+        } catch (err) {
+            setDrilldown(prev => ({ ...prev, loading: false, leads: [] }));
+            alert('Failed to fetch lead details');
+        }
+    };
+
+    return (
+        <div className="container-fluid py-4" style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+            {/* Header */}
+            {/* <div className="mb-4">
+                <h1 className="display-5 fw-bold text-dark mb-2">Dashboard</h1>
+                <p className="text-muted">Real-time analytics based on Applied Courses data</p>
+            </div> */}
+
+            {/* Loading State */}
+            {isLoading && (
+                <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <p className="mt-3 text-muted">Loading analytics data...</p>
+                </div>
+            )}
+
+            {/* Show content only when not loading */}
+            {!isLoading && (
+                <>
+                    {/* Advanced Date Picker Modal */}
+                    {showDatePicker && (
+                        <AdvancedDatePicker
+                            onDateRangeChange={handleDateRangeChange}
+                            onClose={() => setShowDatePicker(false)}
+                        />
+                    )}
+
+                    {/* Modern Date Picker for Counsellor Status Table */}
+                    <ModernDatePicker
+                        isOpen={showCounsellorDatePicker}
+                        onClose={() => setShowCounsellorDatePicker(false)}
+                        onDateSelect={handleCounsellorDateSelect}
+                    />
+
+                    {/* Filters */}
+                    <div className="card shadow-sm mb-4">
+                        <div className="card-body d-flex justify-content-end">
+                            <div className="row justify-content-end g-3">
+                                {/* <div className="col-md-3">
+                  <label className="form-label fw-medium">Center:</label>
+                  <select 
+                    value={selectedCenter} 
+                    onChange={(e) => setSelectedCenter(e.target.value)}
+                    className="form-select"
+                  >
+                    <option value="all">All Centers</option>
+                    {centers.map(center => (
+                      <option key={center} value={center}>{center}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="col-md-6">
+                  <label className="form-label fw-medium">Date Range:</label>
+                  <div className="input-group">
+                    <button 
+                      className="btn btn-outline-secondary w-100 text-start d-flex justify-content-between align-items-center"
+                      onClick={() => setShowDatePicker(true)}
+                    >
+                      <div className="d-flex align-items-center">
+                        <CalendarDays className="me-2" size={20} />
+                        <span>
+                          {!useCustomDate && selectedPeriod === 'today' ? 'Today' :
+                            !useCustomDate && selectedPeriod === 'yesterday' ? 'Yesterday' :
+                            !useCustomDate && selectedPeriod === 'todayYesterday' ? 'Today and yesterday' :
+                            !useCustomDate && selectedPeriod === 'last7' ? 'Last 7 days' :
+                            !useCustomDate && selectedPeriod === 'last30' ? 'Last 30 days' :
+                            !useCustomDate && selectedPeriod === 'thisWeek' ? 'This week' :
+                            !useCustomDate && selectedPeriod === 'lastWeek' ? 'Last week' :
+                            !useCustomDate && selectedPeriod === 'thisMonth' ? 'This month' :
+                            !useCustomDate && selectedPeriod === 'lastMonth' ? 'Last month' :
+                            !useCustomDate && selectedPeriod === 'maximum' ? 'Maximum' :
+                            !useCustomDate && selectedPeriod === 'all' ? 'All Time' :
+                            startDate && endDate && startDate === endDate ?
+                              `${new Date(startDate).toLocaleDateString('en-IN')}` :
+                            startDate && endDate ?
+                              `${new Date(startDate).toLocaleDateString('en-IN')} - ${new Date(endDate).toLocaleDateString('en-IN')}` :
+                            'Select Date Range'
+                          }
+                        </span>
+                      </div>
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="col-md-3">
+                  <button 
+                    className="btn btn-outline-secondary w-100"
+                    onClick={() => {
+                      const dates = getInitialDates();
+                      setSelectedCenter('all');
+                      setSelectedPeriod('today');
+                      setUseCustomDate(false);
+                      setStartDate(dates.start);
+                      setEndDate(dates.end);
+                    }}
+                  >
+                    Reset Filters
+                  </button>
+                </div> */}
+
+                                <div className="col-md-12">
+                                    <div className="d-flex justify-content-end align-items-center gap-2">
+                                        {/* <divr cv> */}
+
+                                        <button
+                                            onClick={() => setIsFilterCollapsed(!isFilterCollapsed)}
+                                            className={`btn ${!isFilterCollapsed ? 'btn-primary' : 'btn-outline-primary'}`}
+                                            style={{ whiteSpace: 'nowrap' }}
+                                        >
+                                            <i className={`fas fa-filter me-1 ${!isFilterCollapsed ? 'fa-spin' : ''}`}></i>
+                                            Filters
+                                            {Object.values(filterData).filter(val => val && val !== 'true').length > 0 && (
+                                                <span className="bg-light text-dark ms-1">
+                                                    {Object.values(filterData).filter(val => val && val !== 'true').length}
+                                                </span>
+                                            )}
+                                        </button>
+
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Active Filters Alert */}
+                    {(selectedCenter !== 'all' || (selectedPeriod !== 'all' && selectedPeriod !== 'last30') || (useCustomDate && startDate && endDate)) && (
+                        <div className="alert alert-info py-2 mb-4 d-flex justify-content-between align-items-center" role="alert">
+                            <small>
+                                <strong>Active Filters:</strong>
+                                {selectedCenter !== 'all' && ` Center: ${selectedCenter}`}
+                                {!useCustomDate && selectedPeriod !== 'all' && selectedPeriod !== 'last30' && ` • Period: ${selectedPeriod === 'today' ? 'Today' :
+                                    selectedPeriod === 'yesterday' ? 'Yesterday' :
+                                        selectedPeriod === 'todayYesterday' ? 'Today and yesterday' :
+                                            selectedPeriod === 'last7' ? 'Last 7 days' :
+                                                selectedPeriod === 'last30' ? 'Last 30 days' :
+                                                    selectedPeriod === 'thisWeek' ? 'This week' :
+                                                        selectedPeriod === 'lastWeek' ? 'Last week' :
+                                                            selectedPeriod === 'thisMonth' ? 'This month' :
+                                                                selectedPeriod === 'lastMonth' ? 'Last month' :
+                                                                    selectedPeriod === 'maximum' ? 'Maximum' :
+                                                                        'Custom'
+                                    }`}
+                                {useCustomDate && startDate && endDate && ` • Date Range: ${new Date(startDate).toLocaleDateString('en-IN')} to ${new Date(endDate).toLocaleDateString('en-IN')}`}
+                            </small>
+                            <button
+                                className="btn btn-sm btn-outline-secondary"
+                                onClick={() => {
+                                    const dates = getInitialDates();
+                                    setSelectedCenter('all');
+                                    setSelectedPeriod('today');
+                                    setUseCustomDate(false);
+                                    setStartDate(dates.start);
+                                    setEndDate(dates.end);
+                                }}
+                            >
+                                Reset All Filters
+                            </button>
+                        </div>
+                    )}
+
+                    {/* AI Dashboard Daily Summary */}
+                    <div className="card shadow-sm border-0 mb-4">
+                        <div className="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                                <AlertCircle className="text-primary" size={18} />
+                                <strong>Today's AI Insights</strong>
+                            </div>
+                            <button
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={generateDailyAiSummary}
+                                disabled={aiDailySummaryLoading}
+                            >
+                                {aiDailySummaryLoading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                        Generating…
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-robot me-2"></i>
+                                        Generate
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                        <div className="card-body">
+                            <div className="row g-3">
+                                <div className="col-12 col-lg-4">
+                                    <div className="small text-muted mb-2"><strong>Snapshot</strong></div>
+                                    <ul className="small mb-0 ps-3">
+                                        <li>Total leads: {dashboardAiStats.totalLeads}</li>
+                                        <li>KYC pending: {dashboardAiStats.kycPending}</li>
+                                        <li>KYC done: {dashboardAiStats.kycDone}</li>
+                                        <li>
+                                            KYC completion rate:&nbsp;
+                                            {dashboardAiStats.totalLeads > 0
+                                                ? `${Math.round((dashboardAiStats.kycDone / dashboardAiStats.totalLeads) * 100)}%`
+                                                : '0%'}
+                                        </li>
+                                        <li>Admissions: {dashboardAiStats.admissions}</li>
+                                        <li>Overdue follow-ups: {dashboardAiStats.overdueFollowups}</li>
+                                    </ul>
+                                </div>
+                                <div className="col-12 col-lg-8">
+                                    {aiDailySummaryError && (
+                                        <div className="alert alert-danger py-2 mb-2">{aiDailySummaryError}</div>
+                                    )}
+                                    {aiDailySummary ? (
+                                        <div className="small">
+                                            <div className="fw-semibold mb-2">{aiDailySummary.title}</div>
+                                            <div className="text-muted" style={{ whiteSpace: 'pre-line' }}>{aiDailySummary.summary}</div>
+                                            {Array.isArray(aiDailySummary.risks) && aiDailySummary.risks.length > 0 && (
+                                                <div className="mt-3">
+                                                    <div className="fw-semibold mb-1">Risks</div>
+                                                    <ul className="mb-0 ps-3">
+                                                        {aiDailySummary.risks.map((r, i) => <li key={i}>{r}</li>)}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            {Array.isArray(aiDailySummary.suggestedFocus) && aiDailySummary.suggestedFocus.length > 0 && (
+                                                <div className="mt-3">
+                                                    <div className="fw-semibold mb-1">Suggested focus</div>
+                                                    <ul className="mb-0 ps-3">
+                                                        {aiDailySummary.suggestedFocus.map((s, i) => <li key={i}>{s}</li>)}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="text-muted small">
+                                            Click <strong>Generate</strong> to create a management-ready summary for the selected period.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card shadow-sm border-0 mb-4">
+                        <div className="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                                <CheckCircle className="text-success" size={18} />
+                                <strong>AI Admission Supervision</strong>
+                            </div>
+                            <button
+                                className="btn btn-sm btn-outline-success"
+                                onClick={generateAdmissionAiSupervision}
+                                disabled={aiAdmissionSummaryLoading}
+                            >
+                                {aiAdmissionSummaryLoading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                        Supervising...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-user-graduate me-2"></i>
+                                        Run Admission AI
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                        <div className="card-body">
+                            <div className="row g-3 mb-3">
+                                <div className="col-12 col-md-3">
+                                    <div className="border rounded-3 p-3 bg-light h-100">
+                                        <div className="text-muted small mb-1">Total Admitted</div>
+                                        <div className="h4 mb-0 text-success">{admissionSupervisorData.stats.totalAdmitted}</div>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-3">
+                                    <button
+                                        type="button"
+                                        className="border rounded-3 p-3 bg-light h-100 w-100 text-start"
+                                        style={{ border: '1px solid #dee2e6' }}
+                                        onClick={() => setAiSupervisionQueueFilter('admissionUnpaid')}
+                                    >
+                                        <div className="text-muted small mb-1">Unpaid Admissions</div>
+                                        <div className="h4 mb-0 text-warning">{admissionSupervisorData.stats.unpaidAdmissions}</div>
+                                    </button>
+                                </div>
+                                <div className="col-12 col-md-3">
+                                    <button
+                                        type="button"
+                                        className="border rounded-3 p-3 bg-light h-100 w-100 text-start"
+                                        style={{ border: '1px solid #dee2e6' }}
+                                        onClick={() => setAiSupervisionQueueFilter('admissionNoBatch')}
+                                    >
+                                        <div className="text-muted small mb-1">No Batch Assigned</div>
+                                        <div className="h4 mb-0 text-primary">{admissionSupervisorData.stats.noBatchAssigned}</div>
+                                    </button>
+                                </div>
+                                <div className="col-12 col-md-3">
+                                    <button
+                                        type="button"
+                                        className="border rounded-3 p-3 bg-light h-100 w-100 text-start"
+                                        style={{ border: '1px solid #dee2e6' }}
+                                        onClick={() => setAiSupervisionQueueFilter('dropoutRisk')}
+                                    >
+                                        <div className="text-muted small mb-1">Dropouts</div>
+                                        <div className="h4 mb-0 text-danger">{admissionSupervisorData.stats.dropouts}</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="border rounded-3 p-3 bg-light mb-3">
+                                <div className="fw-semibold mb-2">Course-wise Admission Breakdown</div>
+                                {admissionSupervisorData.courseBreakdown.length > 0 ? (
+                                    <div className="table-responsive">
+                                        <table className="table table-sm align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Course</th>
+                                                    <th className="text-center">Admissions</th>
+                                                    <th className="text-center">Paid</th>
+                                                    <th className="text-center">Unpaid</th>
+                                                    <th className="text-center">Dropouts</th>
+                                                    <th className="text-center">No Batch</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {admissionSupervisorData.courseBreakdown.map((course) => (
+                                                    <tr key={course.courseName}>
+                                                        <td className="fw-medium">{course.courseName}</td>
+                                                        <td className="text-center">{course.totalAdmitted}</td>
+                                                        <td className="text-center text-success">{course.paidAdmissions}</td>
+                                                        <td className="text-center text-warning">{course.unpaidAdmissions}</td>
+                                                        <td className="text-center text-danger">{course.dropouts}</td>
+                                                        <td className="text-center text-primary">{course.noBatchAssigned}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="text-muted small">No course-wise admissions found for the current filters.</div>
+                                )}
+                            </div>
+
+                            <div className="border rounded-3 p-3 bg-light mb-3">
+                                <div className="fw-semibold mb-2">Admission Student Table</div>
+                                {admissionSupervisorData.admissionRows.length > 0 ? (
+                                    <div className="table-responsive">
+                                        <table className="table table-sm align-middle mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Student Name</th>
+                                                    <th>Course Name</th>
+                                                    <th>Center</th>
+                                                    <th>Counselor</th>
+                                                    <th>Admission Date</th>
+                                                    <th>Fee Status</th>
+                                                    <th>Batch</th>
+                                                    <th>Status</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {admissionSupervisorData.admissionRows.map((row) => (
+                                                    <tr key={row._id}>
+                                                        <td className="fw-medium">{row.studentName}</td>
+                                                        <td>{row.courseName}</td>
+                                                        <td>{row.centerName}</td>
+                                                        <td>{row.counselorName}</td>
+                                                        <td>{row.admissionDate ? new Date(row.admissionDate).toLocaleDateString('en-IN') : 'N/A'}</td>
+                                                        <td>
+                                                            <span className={row.feeStatus === 'Paid' ? 'text-success fw-medium' : 'text-warning fw-medium'}>
+                                                                {row.feeStatus}
+                                                            </span>
+                                                        </td>
+                                                        <td>{row.batchName}</td>
+                                                        <td>
+                                                            <span className={row.dropout ? 'text-danger fw-medium' : 'text-success fw-medium'}>
+                                                                {row.dropout ? 'Dropout' : 'Active'}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-sm btn-outline-info"
+                                                                onClick={() => openLeadInAiDetail(row._id)}
+                                                            >
+                                                                Open AI Detail
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="text-muted small">No admission student data found for the current filters.</div>
+                                )}
+                            </div>
+
+                            {aiAdmissionSummaryError && (
+                                <div className="alert alert-danger py-2 mb-3">{aiAdmissionSummaryError}</div>
+                            )}
+
+                            <div className="row g-3">
+                                <div className="col-12 col-lg-5">
+                                    <div className="border rounded-3 p-3 h-100 bg-light">
+                                        <div className="fw-semibold mb-2">Top Admission Risk Leads</div>
+                                        {admissionSupervisorData.topRiskLeads.length > 0 ? (
+                                            <div className="d-flex flex-column gap-2">
+                                                {admissionSupervisorData.topRiskLeads.map((lead) => (
+                                                    <div key={lead._id} className="border rounded-3 bg-white p-2">
+                                                        <div className="fw-semibold small">{lead.name}</div>
+                                                        <div className="text-muted small">{lead.center} | {lead.course}</div>
+                                                        <div className="small mt-1">
+                                                            Batch: {lead.batchName} | Fee: {lead.isPaid ? 'Paid' : 'Unpaid'} | {lead.isDropout ? 'Dropout' : 'Active'}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-link px-0 mt-1"
+                                                            onClick={() => openLeadInAiDetail(lead._id)}
+                                                        >
+                                                            Open full AI detail
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-muted small">No major post-admission risks detected in the current filters.</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="col-12 col-lg-7">
+                                    {aiAdmissionSummary ? (
+                                        <div className="border rounded-3 p-3 h-100">
+                                            <div className="fw-semibold mb-2">{aiAdmissionSummary.title || 'Admission Supervision Summary'}</div>
+                                            <div className="small text-muted" style={{ whiteSpace: 'pre-line' }}>
+                                                {aiAdmissionSummary.summary}
+                                            </div>
+                                            {Array.isArray(aiAdmissionSummary.risks) && aiAdmissionSummary.risks.length > 0 && (
+                                                <div className="mt-3">
+                                                    <div className="fw-semibold mb-1">Risks</div>
+                                                    <ul className="small mb-0 ps-3">
+                                                        {aiAdmissionSummary.risks.map((risk, index) => (
+                                                            <li key={index}>{risk}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            {Array.isArray(aiAdmissionSummary.suggestedFocus) && aiAdmissionSummary.suggestedFocus.length > 0 && (
+                                                <div className="mt-3">
+                                                    <div className="fw-semibold mb-1">Admission Actions</div>
+                                                    <ul className="small mb-0 ps-3">
+                                                        {aiAdmissionSummary.suggestedFocus.map((focus, index) => (
+                                                            <li key={index}>{focus}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="border rounded-3 p-4 h-100 d-flex align-items-center justify-content-center text-muted small bg-light">
+                                            Click <strong className="ms-1 me-1">Run Admission AI</strong> to supervise admission-post data like fee status, batch allocation, branch assignment, and dropouts from the dashboard.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card shadow-sm border-0 mb-4">
+                        <div className="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                                <FileCheck className="text-warning" size={18} />
+                                <strong>AI KYC Supervision</strong>
+                            </div>
+                            <button
+                                className="btn btn-sm btn-outline-warning"
+                                onClick={generateKycAiSupervision}
+                                disabled={aiKycSummaryLoading}
+                            >
+                                {aiKycSummaryLoading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                        Supervising...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-user-shield me-2"></i>
+                                        Run KYC Supervision
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                        <div className="card-body">
+                            <div className="row g-3 mb-3">
+                                <div className="col-12 col-md-3">
+                                    <div className="border rounded-3 p-3 bg-light h-100">
+                                        <div className="text-muted small mb-1">Pending KYC</div>
+                                        <div className="h4 mb-0 text-warning">{kycSupervisorData.stats.kycPending}</div>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-3">
+                                    <button
+                                        type="button"
+                                        className="border rounded-3 p-3 bg-light h-100 w-100 text-start"
+                                        style={{ border: '1px solid #dee2e6' }}
+                                        onClick={() => setAiSupervisionQueueFilter('kycRejected')}
+                                    >
+                                        <div className="text-muted small mb-1">Rejected Docs</div>
+                                        <div className="h4 mb-0 text-danger">{kycSupervisorData.stats.leadsWithRejectedDocuments}</div>
+                                    </button>
+                                </div>
+                                <div className="col-12 col-md-3">
+                                    <button
+                                        type="button"
+                                        className="border rounded-3 p-3 bg-light h-100 w-100 text-start"
+                                        style={{ border: '1px solid #dee2e6' }}
+                                        onClick={() => setAiSupervisionQueueFilter('kycNoUpload')}
+                                    >
+                                        <div className="text-muted small mb-1">No Uploads</div>
+                                        <div className="h4 mb-0 text-secondary">{kycSupervisorData.stats.leadsWithoutAnyUploads}</div>
+                                    </button>
+                                </div>
+                                <div className="col-12 col-md-3">
+                                    <button
+                                        type="button"
+                                        className="border rounded-3 p-3 bg-light h-100 w-100 text-start"
+                                        style={{ border: '1px solid #dee2e6' }}
+                                        onClick={() => setAiSupervisionQueueFilter('kycPendingVerification')}
+                                    >
+                                        <div className="text-muted small mb-1">Pending Verification</div>
+                                        <div className="h4 mb-0 text-primary">{kycSupervisorData.stats.leadsPendingVerification}</div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="border rounded-3 p-3 bg-light mb-3">
+                                <div className="fw-semibold mb-2">KYC Student Table</div>
+                                {kycSupervisorData.kycRows.length > 0 ? (
+                                    <div
+                                        className="table-responsive"
+                                        style={{ maxHeight: '560px', overflowY: 'auto' }}
+                                    >
+                                        <table className="table table-sm align-middle mb-0">
+                                            <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+                                                <tr>
+                                                    <th>Student Name</th>
+                                                    <th>Course Name</th>
+                                                    <th>Center</th>
+                                                    <th>KYC Bucket</th>
+                                                    <th className="text-center">Pending Docs</th>
+                                                    <th className="text-center">Rejected Docs</th>
+                                                    <th className="text-center">Verified Docs</th>
+                                                    <th>Upload Status</th>
+                                                    <th>Verification Status</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {kycSupervisorData.kycRows.map((row) => (
+                                                    <tr key={row._id}>
+                                                        <td className="fw-medium">{row.studentName}</td>
+                                                        <td>{row.courseName}</td>
+                                                        <td>{row.centerName}</td>
+                                                        <td>
+                                                            <span className={
+                                                                row.kycCategory === 'Rejected'
+                                                                    ? 'text-danger fw-medium'
+                                                                    : row.kycCategory === 'Pending Verification'
+                                                                        ? 'text-primary fw-medium'
+                                                                        : row.kycCategory === 'Pending KYC'
+                                                                            ? 'text-warning fw-medium'
+                                                                            : 'text-success fw-medium'
+                                                            }>
+                                                                {row.kycCategory}
+                                                            </span>
+                                                        </td>
+                                                        <td className="text-center text-warning fw-medium">{row.pendingDocs}</td>
+                                                        <td className="text-center text-danger fw-medium">{row.rejectedDocs}</td>
+                                                        <td className="text-center text-success fw-medium">{row.verifiedDocs}</td>
+                                                        <td>
+                                                            <span className={row.uploadStatus === 'No Upload' ? 'text-danger fw-medium' : 'text-success fw-medium'}>
+                                                                {row.uploadStatus}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <span className={row.verificationStatus === 'Pending Verification' ? 'text-warning fw-medium' : 'text-muted fw-medium'}>
+                                                                {row.verificationStatus}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            <button
+                                                                type="button"
+                                                                className="btn btn-sm btn-outline-info"
+                                                                onClick={() => openLeadInAiDetail(row._id)}
+                                                            >
+                                                                Open AI Detail
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <div className="text-muted small">No KYC student data found for the current filters.</div>
+                                )}
+                            </div>
+
+                            {aiKycSummaryError && (
+                                <div className="alert alert-danger py-2 mb-3">{aiKycSummaryError}</div>
+                            )}
+
+                            <div className="row g-3">
+                                <div className="col-12 col-lg-5">
+                                    <div className="border rounded-3 p-3 h-100 bg-light">
+                                        <div className="fw-semibold mb-2">Top KYC Risk Leads</div>
+                                        {kycSupervisorData.topRiskLeads.length > 0 ? (
+                                            <div className="d-flex flex-column gap-2">
+                                                {kycSupervisorData.topRiskLeads.map((lead) => (
+                                                    <div key={lead._id} className="border rounded-3 bg-white p-2">
+                                                        <div className="fw-semibold small">{lead.name}</div>
+                                                        <div className="text-muted small">{lead.center} | {lead.course}</div>
+                                                        <div className="small mt-1">
+                                                            Pending: {lead.pendingDocs} | Rejected: {lead.rejectedDocs} | Verified: {lead.verifiedDocs}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-link px-0 mt-1"
+                                                            onClick={() => openLeadInAiDetail(lead._id)}
+                                                        >
+                                                            Open full AI detail
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-muted small">No major KYC-risk leads detected in the current filters.</div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="col-12 col-lg-7">
+                                    {aiKycSummary ? (
+                                        <div className="border rounded-3 p-3 h-100">
+                                            <div className="fw-semibold mb-2">{aiKycSummary.title || 'KYC Supervision Summary'}</div>
+                                            <div className="small text-muted" style={{ whiteSpace: 'pre-line' }}>
+                                                {aiKycSummary.summary}
+                                            </div>
+                                            {Array.isArray(aiKycSummary.risks) && aiKycSummary.risks.length > 0 && (
+                                                <div className="mt-3">
+                                                    <div className="fw-semibold mb-1">Risks</div>
+                                                    <ul className="small mb-0 ps-3">
+                                                        {aiKycSummary.risks.map((risk, index) => (
+                                                            <li key={index}>{risk}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            {Array.isArray(aiKycSummary.suggestedFocus) && aiKycSummary.suggestedFocus.length > 0 && (
+                                                <div className="mt-3">
+                                                    <div className="fw-semibold mb-1">Supervisor Actions</div>
+                                                    <ul className="small mb-0 ps-3">
+                                                        {aiKycSummary.suggestedFocus.map((focus, index) => (
+                                                            <li key={index}>{focus}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="border rounded-3 p-4 h-100 d-flex align-items-center justify-content-center text-muted small bg-light">
+                                            Click <strong className="ms-1 me-1">Run KYC Supervision</strong> to get AI supervision based on KYC management data, document status, and risky leads.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="card shadow-sm border-0 mb-4">
+                        <div className="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                                <AlertTriangle className="text-danger" size={18} />
+                                <strong>AI Supervision Action Queue</strong>
+                            </div>
+                            <div className="d-flex flex-wrap gap-2 align-items-center">
+                                <input
+                                    type="text"
+                                    className="form-control form-control-sm"
+                                    style={{ minWidth: '260px' }}
+                                    placeholder="Search student, course, reason, phone..."
+                                    value={aiSupervisionSearchTerm}
+                                    onChange={(e) => setAiSupervisionSearchTerm(e.target.value)}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-secondary"
+                                    onClick={() => {
+                                        setAiSupervisionQueueFilter('all');
+                                        setAiSupervisionSearchTerm('');
+                                    }}
+                                >
+                                    Clear Filters
+                                </button>
+                            </div>
+                        </div>
+                        <div className="card-body">
+                            <div className="d-flex flex-wrap gap-2 mb-3">
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'all' ? 'btn-dark' : 'btn-outline-dark'}`} onClick={() => setAiSupervisionQueueFilter('all')}>
+                                    All ({aiQueueCounts.all})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'kycRejected' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setAiSupervisionQueueFilter('kycRejected')}>
+                                    Rejected ({aiQueueCounts.kycRejected})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'kycPendingVerification' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setAiSupervisionQueueFilter('kycPendingVerification')}>
+                                    Pending Verification ({aiQueueCounts.kycPendingVerification})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'kycNoUpload' ? 'btn-secondary' : 'btn-outline-secondary'}`} onClick={() => setAiSupervisionQueueFilter('kycNoUpload')}>
+                                    No Upload ({aiQueueCounts.kycNoUpload})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'admissionUnpaid' ? 'btn-warning text-dark' : 'btn-outline-warning'}`} onClick={() => setAiSupervisionQueueFilter('admissionUnpaid')}>
+                                    Unpaid ({aiQueueCounts.admissionUnpaid})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'admissionNoBatch' ? 'btn-info text-dark' : 'btn-outline-info'}`} onClick={() => setAiSupervisionQueueFilter('admissionNoBatch')}>
+                                    No Batch ({aiQueueCounts.admissionNoBatch})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'dropoutRisk' ? 'btn-danger' : 'btn-outline-danger'}`} onClick={() => setAiSupervisionQueueFilter('dropoutRisk')}>
+                                    Dropouts ({aiQueueCounts.dropoutRisk})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'insufficientFollowup' ? 'btn-secondary' : 'btn-outline-secondary'}`} onClick={() => setAiSupervisionQueueFilter('insufficientFollowup')}>
+                                    Low Follow-up ({aiQueueCounts.insufficientFollowup})
+                                </button>
+                                <button type="button" className={`btn btn-sm ${aiSupervisionQueueFilter === 'overdueFollowup' ? 'btn-outline-dark active' : 'btn-outline-dark'}`} onClick={() => setAiSupervisionQueueFilter('overdueFollowup')}>
+                                    Overdue ({aiQueueCounts.overdueFollowup})
+                                </button>
+                            </div>
+
+                            <div className="small text-muted mb-3">
+                                Showing {filteredAiSupervisionQueue.length} action item(s)
+                                {aiSupervisionSearchTerm ? ` for "${aiSupervisionSearchTerm}"` : ''}.
+                            </div>
+
+                            {filteredAiSupervisionQueue.length > 0 ? (
+                                <div
+                                    className="table-responsive"
+                                    style={{ maxHeight: '560px', overflowY: 'auto' }}
+                                >
+                                    <table className="table table-sm align-middle mb-0">
+                                        <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+                                            <tr>
+                                                <th>Severity</th>
+                                                <th>Student</th>
+                                                <th>Course</th>
+                                                <th>Center</th>
+                                                <th>Issue</th>
+                                                <th>Reason</th>
+                                                <th>Recommended Action</th>
+                                                <th>Open</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredAiSupervisionQueue.map((item) => (
+                                                <tr key={item._id}>
+                                                    <td>
+                                                        <span className={`badge ${item.severity === 'High' ? 'bg-danger' : item.severity === 'Medium' ? 'bg-warning text-dark' : 'bg-success'}`}>
+                                                            {item.severity}
+                                                        </span>
+                                                    </td>
+                                                    <td className="fw-medium">{item.studentName}</td>
+                                                    <td>{item.courseName}</td>
+                                                    <td>{item.centerName}</td>
+                                                    <td>{item.label}</td>
+                                                    <td className="small text-muted">
+                                                        {item.reason}
+                                                        {typeof item.followupAttempts === 'number' && (
+                                                            <div className="mt-1">
+                                                                Attempts: {item.followupAttempts}
+                                                                {item.followupSufficiency ? ` | ${item.followupSufficiency}` : ''}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="small">{item.action}</td>
+                                                    <td>
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-sm btn-outline-info"
+                                                            onClick={() => openLeadInAiDetail(item.leadId)}
+                                                        >
+                                                            AI Detail
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="border rounded-3 p-4 text-muted small bg-light">
+                                    No supervision action item found for the current queue filter.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="card shadow-sm border-0 mb-4">
+                        <div className="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                                <Target className="text-success" size={18} />
+                                <strong>AI Priority Leads</strong>
+                            </div>
+                            <button
+                                className="btn btn-sm btn-outline-success"
+                                onClick={generatePriorityLeadInsights}
+                                disabled={aiLeadIntelLoading}
+                            >
+                                {aiLeadIntelLoading ? (
+                                    <>
+                                        <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                        Scoring...
+                                    </>
+                                ) : (
+                                    <>
+                                        <i className="fas fa-brain me-2"></i>
+                                        Analyze Top Leads
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                        <div className="card-body">
+                            <div className="row g-3 mb-3">
+                                <div className="col-12 col-md-4">
+                                    <div className="border rounded p-3 bg-light h-100">
+                                        <div className="text-muted small mb-1">High Priority</div>
+                                        <div className="h4 mb-0 text-danger">{aiLeadPrioritySnapshot.high}</div>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-4">
+                                    <div className="border rounded p-3 bg-light h-100">
+                                        <div className="text-muted small mb-1">Medium Priority</div>
+                                        <div className="h4 mb-0 text-warning">{aiLeadPrioritySnapshot.medium}</div>
+                                    </div>
+                                </div>
+                                <div className="col-12 col-md-4">
+                                    <div className="border rounded p-3 bg-light h-100">
+                                        <div className="text-muted small mb-1">Low Priority</div>
+                                        <div className="h4 mb-0 text-success">{aiLeadPrioritySnapshot.low}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {aiLeadIntelError && (
+                                <div className="alert alert-danger py-2 mb-3">{aiLeadIntelError}</div>
+                            )}
+
+                            {aiLeadIntel.length > 0 ? (
+                                <div className="row g-3">
+                                    {aiLeadIntel.map((lead) => (
+                                        <div className="col-12 col-xl-6" key={lead._id}>
+                                            <div className="border rounded-3 p-3 h-100 bg-white">
+                                                <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                                    <div>
+                                                        <div className="fw-semibold">{lead.name}</div>
+                                                        <div className="text-muted small">
+                                                            {lead.course} • {lead.center} • {lead.counselor}
+                                                        </div>
+                                                    </div>
+                                                    <span className={`badge ${lead.priority === 'High' ? 'bg-danger' : lead.priority === 'Medium' ? 'bg-warning text-dark' : 'bg-success'}`}>
+                                                        {lead.priority || 'Unscored'}
+                                                    </span>
+                                                </div>
+
+                                                <div className="d-flex flex-wrap gap-2 small mb-2">
+                                                    <span className="badge bg-light text-dark border">Score: {lead.score ?? '-'}</span>
+                                                    <span className="badge bg-light text-dark border">Intent: {lead.intent || '-'}</span>
+                                                    <span className="badge bg-light text-dark border">Status: {lead.status || '-'}</span>
+                                                    {lead.followupDate && (
+                                                        <span className="badge bg-light text-dark border">
+                                                            Follow-up: {new Date(lead.followupDate).toLocaleDateString('en-IN')}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="small text-muted mb-2" style={{ minHeight: '42px' }}>
+                                                    {lead.summary || 'AI summary not available for this lead yet.'}
+                                                </div>
+
+                                                <div className="border-top pt-2">
+                                                    <div className="small fw-semibold mb-1">Suggested action</div>
+                                                    <div className="small">{lead.suggestedAction || 'No action suggested.'}</div>
+                                                </div>
+                                                <div className="mt-3">
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-sm btn-outline-info"
+                                                        onClick={() => openLeadInAiDetail(lead._id)}
+                                                    >
+                                                        Open full AI detail
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-muted small">
+                                    Click <strong>Analyze Top Leads</strong> to score the most important registration leads and get action suggestions from Anthropic.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div ref={aiDetailSectionRef} className="card shadow-sm border-0 mb-4">
+                        <div className="card-header bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                            <div className="d-flex align-items-center gap-2">
+                                <Users className="text-info" size={18} />
+                                <strong>AI Registration Full Detail</strong>
+                            </div>
+                            <div className="d-flex gap-2 flex-wrap align-items-center">
+                                <input
+                                    type="text"
+                                    className="form-control form-control-sm"
+                                    style={{ minWidth: '240px' }}
+                                    placeholder="Search by student, center, course, phone..."
+                                    value={aiLeadSearchTerm}
+                                    onChange={(e) => setAiLeadSearchTerm(e.target.value)}
+                                />
+                                <select
+                                    className="form-select form-select-sm"
+                                    style={{ minWidth: '320px' }}
+                                    value={selectedAiLeadId}
+                                    onChange={(e) => {
+                                        setSelectedAiLeadId(e.target.value);
+                                        setAiLeadDetail(null);
+                                        setAiLeadActions([]);
+                                        setAiLeadDetailError(null);
+                                    }}
+                                >
+                                    <option value="">Select registration lead</option>
+                                    {aiFilteredLeadOptions.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    className="btn btn-sm btn-outline-info"
+                                    onClick={generateDetailedAiLeadProfile}
+                                    disabled={!selectedAiLeadId || aiLeadDetailLoading}
+                                >
+                                    {aiLeadDetailLoading ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                            Generating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="fas fa-magnifying-glass-chart me-2"></i>
+                                            Generate Full AI Detail
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="card-body">
+                            {aiLeadDetailError && (
+                                <div className="alert alert-danger py-2 mb-3">{aiLeadDetailError}</div>
+                            )}
+
+                            <div className="small text-muted mb-3">
+                                Showing {aiFilteredLeadOptions.length} searchable registrations
+                                {aiLeadSearchTerm ? ` for "${aiLeadSearchTerm}"` : ''}.
+                            </div>
+
+                            {selectedAiLead ? (
+                                <div className="row g-3">
+                                    <div className="col-12 col-lg-4">
+                                        <div className="border rounded-3 p-3 h-100 bg-light">
+                                            {(() => {
+                                                const followupSummary = getLeadFollowupSummary(selectedAiLead);
+                                                return (
+                                                    <>
+                                            <div className="fw-semibold mb-2">{getLeadDisplayName(selectedAiLead)}</div>
+                                            <div className="small text-muted mb-2">{getLeadCenterName(selectedAiLead)} | {getLeadCounselorName(selectedAiLead)}</div>
+                                            <div className="small mb-1"><strong>Course:</strong> {selectedAiLead?._course?.name || selectedAiLead?.courseName || 'Not specified'}</div>
+                                            <div className="small mb-1"><strong>Status:</strong> {selectedAiLead?._leadStatus?.title || selectedAiLead?.leadStatus || 'Unknown'}</div>
+                                            <div className="small mb-1"><strong>KYC:</strong> {selectedAiLead?.kyc ? 'Done' : selectedAiLead?.kycStage ? 'In Progress' : 'Not Started'}</div>
+                                            <div className="small mb-1"><strong>KYC Bucket:</strong> {getLeadDocumentSnapshot(selectedAiLead).category}</div>
+                                            <div className="small mb-1"><strong>Admission:</strong> {selectedAiLead?.admissionDone ? 'Done' : 'Pending'}</div>
+                                            <div className="small mb-1"><strong>Registration Fee:</strong> {selectedAiLead?.registrationFee || 'Unknown'}</div>
+                                            <div className="small mb-1"><strong>Batch:</strong> {getLeadBatchName(selectedAiLead) || 'Unassigned'}</div>
+                                            <div className="small mb-1"><strong>Follow-up Date:</strong> {selectedAiLead?.followupDate ? new Date(selectedAiLead.followupDate).toLocaleDateString('en-IN') : 'N/A'}</div>
+                                            <div className="small mb-1"><strong>Follow-up Attempts:</strong> {followupSummary.totalAttempts}</div>
+                                            <div className="small mb-1"><strong>Follow-up Sufficiency:</strong> {followupSummary.sufficiency}</div>
+                                            <div className="small mb-1"><strong>Done / Missed / Planned:</strong> {followupSummary.doneCount} / {followupSummary.missedCount} / {followupSummary.plannedCount}</div>
+                                            <div className="small mb-0"><strong>Recent Notes:</strong> {getLeadNotes(selectedAiLead).length}</div>
+                                            {followupSummary.totalAttempts < 2 && (
+                                                <div className="mt-3 border-top pt-2">
+                                                    <div className="small fw-semibold mb-1">Necessary Follow-up Steps</div>
+                                                    <ul className="small mb-0 ps-3">
+                                                        {getLowFollowupActionPlan(selectedAiLead).map((step, index) => (
+                                                            <li key={index}>{step}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+
+                                    <div className="col-12 col-lg-8">
+                                        {aiLeadDetail ? (
+                                            <div className="row g-3">
+                                                <div className="col-12">
+                                                    <div className="border rounded-3 p-3 h-100">
+                                                        <div className="fw-semibold mb-2">AI Summary</div>
+                                                        <div className="small text-muted" style={{ whiteSpace: 'pre-line' }}>
+                                                            {aiLeadDetail.summary || 'No summary generated.'}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <div className="border rounded-3 p-3 h-100">
+                                                        <div className="fw-semibold mb-2">Student Goal</div>
+                                                        <div className="small">{aiLeadDetail.goal || 'Not identified'}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <div className="border rounded-3 p-3 h-100">
+                                                        <div className="fw-semibold mb-2">Interest Area</div>
+                                                        <div className="small">{aiLeadDetail.interestArea || 'Not identified'}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <div className="border rounded-3 p-3 h-100">
+                                                        <div className="fw-semibold mb-2">Budget Range</div>
+                                                        <div className="small">{aiLeadDetail.budgetRange || 'Not specified'}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <div className="border rounded-3 p-3 h-100">
+                                                        <div className="fw-semibold mb-2">Urgency</div>
+                                                        <div className="small">{aiLeadDetail.urgency || 'Not clear yet'}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <div className="border rounded-3 p-3 h-100">
+                                                        <div className="fw-semibold mb-2">Concerns</div>
+                                                        {Array.isArray(aiLeadDetail.concerns) && aiLeadDetail.concerns.length > 0 ? (
+                                                            <ul className="small mb-0 ps-3">
+                                                                {aiLeadDetail.concerns.map((item, index) => (
+                                                                    <li key={index}>{item}</li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : (
+                                                            <div className="small text-muted">No clear concerns detected.</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="col-12 col-md-6">
+                                                    <div className="border rounded-3 p-3 h-100">
+                                                        <div className="fw-semibold mb-2">Next Best Actions</div>
+                                                        {aiLeadActions.length > 0 ? (
+                                                            <ul className="small mb-0 ps-3">
+                                                                {aiLeadActions.map((action, index) => (
+                                                                    <li key={index}>{action}</li>
+                                                                ))}
+                                                            </ul>
+                                                        ) : (
+                                                            <div className="small text-muted">Generate AI detail to get recommended actions.</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="border rounded-3 p-4 h-100 d-flex align-items-center justify-content-center text-muted small bg-light">
+                                                Select a registration lead and click <strong className="ms-1 me-1">Generate Full AI Detail</strong> to analyze the full record from registration data.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-muted small">
+                                    No registration data is available for the current filters.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Key Metrics Cards */}
+                    {/* <div className="row g-3 mb-4">
+                        <div className="col-12 mb-2">
+                            <p className="text-muted small mb-0">
+                                <strong>Data Period:</strong> {
+                                    useCustomDate && startDate && endDate
+                                        ? `${new Date(startDate).toLocaleDateString('en-IN')} - ${new Date(endDate).toLocaleDateString('en-IN')}`
+                                        : selectedPeriod === 'today' ? 'Today'
+                                            : selectedPeriod === 'yesterday' ? 'Yesterday'
+                                                : selectedPeriod === 'todayYesterday' ? 'Today and yesterday'
+                                                    : selectedPeriod === 'last7' ? 'Last 7 Days'
+                                                        : selectedPeriod === 'last30' ? 'Last 30 Days'
+                                                            : selectedPeriod === 'thisWeek' ? 'This Week'
+                                                                : selectedPeriod === 'lastWeek' ? 'Last Week'
+                                                                    : selectedPeriod === 'thisMonth' ? 'This Month'
+                                                                        : selectedPeriod === 'lastMonth' ? 'Last Month'
+                                                                            : selectedPeriod === 'week' ? 'Last 7 Days'
+                                                                                : selectedPeriod === 'month' ? 'Last Month'
+                                                                                    : selectedPeriod === 'quarter' ? 'Last Quarter'
+                                                                                        : selectedPeriod === 'year' ? 'Last Year'
+                                                                                            : selectedPeriod === 'maximum' ? 'All Available Data'
+                                                                                                : 'All Time'
+                                }
+                                {selectedCenter !== 'all' && ` • Center: ${selectedCenter}`}
+                            </p>
+                        </div>
+
+                        <div className="col-md-2">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p className="text-muted small mb-1">Total Leads</p>
+                                            <p className="h3 fw-bold mb-0">
+                                                {filteredData.length}
+                                            </p>
+                                            <p className="small text-muted mb-0">
+                                                {filteredData.filter(l => l.courseStatus === 0).length} Due
+                                            </p>
+                                        </div>
+                                        <Users className="text-primary opacity-50" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-2">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p className="text-muted small mb-1">KYC Done</p>
+                                            <p className="h3 fw-bold text-purple mb-0">
+                                                {filteredData.filter(l => l.kyc).length}
+                                            </p>
+                                            <p className="small text-muted mb-0">
+                                                {filteredData.filter(l => l.kycStage && !l.kyc).length} In Progress
+                                            </p>
+                                        </div>
+                                        <FileCheck className="text-purple opacity-50" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-2">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p className="text-muted small mb-1">Admissions</p>
+                                            <p className="h3 fw-bold text-success mb-0">
+                                                {filteredData.filter(l => l.admissionDone).length}
+                                            </p>
+                                            <p className="small text-muted mb-0">
+                                                {filteredData.length > 0 ? ((filteredData.filter(l => l.admissionDone).length / filteredData.length) * 100).toFixed(0) : 0}% Rate
+                                            </p>
+                                        </div>
+                                        <CheckCircle className="text-success opacity-50" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-3">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p className="text-muted small mb-1">Revenue</p>
+                                            <p className="h3 fw-bold text-success mb-0">
+                                                ₹{(filteredData.filter(l => l.registrationFee === 'Paid').length * 15000).toLocaleString()}
+                                            </p>
+                                            <p className="small text-muted mb-0">
+                                                {filteredData.filter(l => l.registrationFee === 'Paid').length} Paid
+                                            </p>
+                                        </div>
+                                        <DollarSign className="text-success opacity-50" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-md-3">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <p className="text-muted small mb-1">Dropouts</p>
+                                            <p className="h3 fw-bold text-danger mb-0">
+                                                {filteredData.filter(l => l.dropout).length}
+                                            </p>
+                                            <p className="small text-muted mb-0">
+                                                {filteredData.length > 0 ? ((filteredData.filter(l => l.dropout).length / filteredData.length) * 100).toFixed(0) : 0}% Rate
+                                            </p>
+                                        </div>
+                                        <AlertTriangle className="text-danger opacity-50" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* Main Analytics Matrix */}
+                    {/* <div className="card shadow-sm mb-4">
+                        <div className="card-body">
+                            <h2 className="h4 fw-semibold mb-4 d-flex align-items-center gap-2">
+                                <UserCheck className="text-primary" size={20} />
+                                Counselor Performance Matrix
+                            </h2>
+                            <div className="table-responsive">
+                                <table className="table table-hover align-middle">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th rowSpan={expandedStatus ? 2 : 1}>Counselor</th>
+                                            {allStatuses.map(status => (
+                                                <th
+                                                    key={status}
+                                                    colSpan={
+                                                        expandedStatus === status && allSubstatuses[status]?.length > 0
+                                                            ? allSubstatuses[status].length + 1 // +1 for total
+                                                            : 1
+                                                    }
+                                                    className="text-center"
+                                                    style={{ cursor: 'pointer', background: expandedStatus === status ? '#f0f0f0' : undefined }}
+                                                    onClick={() => setExpandedStatus(expandedStatus === status ? null : status)}
+                                                >
+                                                    {status} <span style={{ fontWeight: 'normal' }}>{expandedStatus === status ? '▲' : '▼'}</span>
+                                                </th>
+                                            ))}
+                                            <th rowSpan={expandedStatus ? 2 : 1}>Total</th>
+                                            <th rowSpan={expandedStatus ? 2 : 1}>KYC</th>
+                                            <th rowSpan={expandedStatus ? 2 : 1}>Admissions</th>
+                                            <th rowSpan={expandedStatus ? 2 : 1}>Dropouts</th>
+                                            <th rowSpan={expandedStatus ? 2 : 1}>Revenue</th>
+                                            <th rowSpan={expandedStatus ? 2 : 1}>Conv. Rate</th>
+                                        </tr>
+                                        {expandedStatus && allSubstatuses[expandedStatus]?.length > 0 && (
+                                            <tr>
+                                                {allStatuses.map(status =>
+                                                    status === expandedStatus
+                                                        ? (
+                                                            <>
+                                                                {allSubstatuses[status].map(sub => (
+                                                                    <th key={sub} className="text-center small text-muted">{sub}</th>
+                                                                ))}
+                                                                <th className="text-center small text-muted">Total</th>
+                                                            </>
+                                                        )
+                                                        : <th key={status}></th>
+                                                )}
+                                            </tr>
+                                        )}
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(counselorMatrix).map(([counselor, data]) => (
+                                            <tr key={counselor}>
+                                                <td>{counselor}</td>
+                                                {allStatuses.map(status =>
+                                                    expandedStatus === status && allSubstatuses[status]?.length > 0
+                                                        ? (
+                                                            <>
+                                                                {allSubstatuses[status].map(sub => (
+                                                                    <td key={sub} className="text-center">
+                                                                        <span className="badge rounded-pill bg-secondary">
+                                                                            {data[status]?.substatuses?.[sub] || 0}
+                                                                        </span>
+                                                                    </td>
+                                                                ))}
+                                                                <td className="text-center">
+                                                                    <span className="badge rounded-pill bg-primary">
+                                                                        {getSubstatusTotal(data, status, allSubstatuses[status])}
+                                                                    </span>
+                                                                </td>
+                                                            </>
+                                                        )
+                                                        : (
+                                                            <td key={status} className="text-center">
+                                                                <span className="badge rounded-pill bg-secondary">
+                                                                    {data[status]?.count || 0}
+                                                                </span>
+                                                            </td>
+                                                        )
+                                                )}
+                                                <td className="text-center fw-semibold">{data.Total}</td>
+                                                <td className="text-center">
+                                                    <span className="text-purple fw-medium">{data.KYCDone}</span>
+                                                    <span className="text-muted small">/{data.KYCStage}</span>
+                                                </td>
+                                                <td className="text-center">
+                                                    <span className="text-success fw-medium">{data.Admissions}</span>
+                                                </td>
+                                                <td className="text-center">
+                                                    <span className={`fw-medium ${data.Dropouts > 0 ? 'text-danger' : 'text-muted'}`}>{data.Dropouts}</span>
+                                                </td>
+                                                <td className="text-center">
+                                                    <span className="text-success fw-medium">₹{(data.Paid * 15000).toLocaleString()}</span>
+                                                </td>
+                                                <td className="text-center">
+                                                    <span className={`badge rounded-pill ${data.ConversionRate > 50 ? 'bg-success' :
+                                                        data.ConversionRate > 30 ? 'bg-warning' :
+                                                            'bg-danger'
+                                                        }`}>
+                                                        {data.ConversionRate}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* Charts Row */}
+                    {/* <div className="row g-4 mb-4">
+                        <div className="col-lg-6">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <h3 className="h5 fw-semibold mb-4 d-flex align-items-center gap-2">
+                                        <Target className="text-success" size={20} />
+                                        Conversion vs Dropout Rates
+                                    </h3>
+                                    <ResponsiveContainer width="100%" height={250}>
+                                        <BarChart data={conversionChartData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="name" />
+                                            <YAxis />
+                                            <Tooltip formatter={(value) => `${value}%`} />
+                                            <Legend />
+                                            <Bar dataKey="conversionRate" fill="#10b981" name="Conversion Rate" />
+                                            <Bar dataKey="dropoutRate" fill="#ef4444" name="Dropout Rate" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-lg-6">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <h3 className="h5 fw-semibold mb-4 d-flex align-items-center gap-2">
+                                        <AlertCircle className="text-primary" size={20} />
+                                        Lead Temperature Distribution
+                                    </h3>
+                                    <ResponsiveContainer width="100%" height={250}>
+                                        <PieChart>
+                                            <Pie
+                                                data={statusDistribution}
+                                                cx="50%"
+                                                cy="50%"
+                                                labelLine={false}
+                                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                                outerRadius={80}
+                                                fill="#8884d8"
+                                                dataKey="value"
+                                            >
+                                                {statusDistribution.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={colors[entry.name]} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* Course-wise Document Status Table */}
+                    {/* <div className="card shadow-sm mb-4">
+                        <div className="card-body">
+                            <h2 className="h5 fw-semibold mb-4">Course-wise Document Status</h2>
+                            <div className="table-responsive">
+                                <table className="table table-hover align-middle">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Course</th>
+                                            <th>Total Leads</th>
+                                            <th>Docs Pending</th>
+                                            <th>Docs Verified</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(getCourseWiseDocStats()).map(([course, stats]) => (
+                                            <tr key={course}>
+                                                <td>{course}</td>
+                                                <td>{stats.totalLeads}</td>
+                                                <td>{stats.docsPending}</td>
+                                                <td>{stats.docsVerified}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* Course-wise Pending Documents Table */}
+                    {/* <div className="card shadow-sm mb-4">
+                        <div className="card-body">
+                            <h2 className="h5 fw-semibold mb-4">Course-wise Pending Documents</h2>
+                            <div className="table-responsive">
+                                <table className="table table-hover align-middle">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Course</th>
+                                            <th>Document Name</th>
+                                            <th>Pending in Leads</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {Object.entries(getCourseWisePendingDocs()).map(([course, docs]) =>
+                                            Object.entries(docs).map(([docName, count], idx) => (
+                                                <tr key={course + docName}>
+                                                    <td>{idx === 0 ? course : ''}</td>
+                                                    <td>{docName}</td>
+                                                    <td>{count}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* Center-wise Analytics */}
+                    {/* <div className="card shadow-sm mb-4">
+                        <div className="card-body">
+                            <h2 className="h4 fw-semibold mb-4 d-flex align-items-center gap-2">
+                                <Building className="text-purple" size={20} />
+                                Center-wise Performance
+                            </h2>
+                            <div className="row g-4">
+                                {Object.entries(centerAnalytics).map(([center, data]) => (
+                                    <div key={center} className="col-lg-6">
+                                        <div className="border rounded p-4">
+                                            <h3 className="h5 fw-semibold mb-3">{center}</h3>
+                                            <div className="row g-3 mb-3">
+                                                <div className="col-4">
+                                                    <p className="text-muted small mb-1">Total Leads</p>
+                                                    <p className="h4 fw-bold mb-0">{data.totalLeads}</p>
+                                                    <p className="text-muted small">{data.assigned} assigned</p>
+                                                </div>
+                                                <div className="col-4">
+                                                    <p className="text-muted small mb-1">Admissions</p>
+                                                    <p className="h4 fw-bold text-success mb-0">{data.admissions}</p>
+                                                    <p className="text-muted small">{data.kyc} KYC done</p>
+                                                </div>
+                                                <div className="col-4">
+                                                    <p className="text-muted small mb-1">Revenue</p>
+                                                    <p className="h5 fw-bold text-success mb-0">₹{data.revenue.toLocaleString()}</p>
+                                                    <p className="text-danger small">{data.dropouts} dropouts</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="row g-3 mb-3">
+                                                <div className="col-12">
+                                                    <ResponsiveContainer width="100%" height={180}>
+                                                        <BarChart data={[
+                                                            { name: 'Leads', value: data.totalLeads },
+                                                            { name: 'Admissions', value: data.admissions },
+                                                            { name: 'Dropouts', value: data.dropouts },
+                                                            { name: 'KYC', value: data.kyc },
+                                                            { name: 'Revenue', value: data.revenue }
+                                                        ]}>
+                                                            <CartesianGrid strokeDasharray="3 3" />
+                                                            <XAxis dataKey="name" />
+                                                            <YAxis />
+                                                            <Tooltip />
+                                                            <Bar dataKey="value" fill="#6366f1" />
+                                                        </BarChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+
+                                            <div className="row g-3 mb-3">
+                                                <div className="col-12">
+                                                    <ResponsiveContainer width="100%" height={180}>
+                                                        <PieChart>
+                                                            <Pie
+                                                                data={Object.entries(data.statusCounts).map(([status, count]) => ({ name: status, value: count }))}
+                                                                cx="50%"
+                                                                cy="50%"
+                                                                labelLine={false}
+                                                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                                                outerRadius={60}
+                                                                fill="#8884d8"
+                                                                dataKey="value"
+                                                            >
+                                                                {Object.keys(data.statusCounts).map((status, idx) => (
+                                                                    <Cell key={status} fill={["#10b981", "#f59e0b", "#ef4444", "#6366f1", "#3b82f6", "#8b5cf6", "#84cc16", "#ec4899"][idx % 8]} />
+                                                                ))}
+                                                            </Pie>
+                                                            <Tooltip />
+                                                        </PieChart>
+                                                    </ResponsiveContainer>
+                                                </div>
+                                            </div>
+
+                                            <div className="border-top pt-3">
+                                                <p className="small fw-medium text-muted mb-2">Counselor Contribution:</p>
+                                                {Object.entries(data.counselors).map(([counselor, stats]) => (
+                                                    <div key={counselor} className="d-flex justify-content-between align-items-center small mb-1">
+                                                        <span className="text-muted">{counselor}</span>
+                                                        <div className="text-end">
+                                                            <span className="fw-medium">{stats.leads} leads</span>
+                                                            <span className="text-success ms-2">{stats.admissions} adm</span>
+                                                            {stats.dropouts > 0 && <span className="text-danger ms-2">{stats.dropouts} drop</span>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* Daily Admissions Analytics */}
+                    {/* <div className="row g-4 mb-4">
+                        <div className="col-lg-6">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <h2 className="h4 fw-semibold mb-4 d-flex align-items-center gap-2">
+                                        <Calendar className="text-indigo" size={20} />
+                                        Daily Admissions Table
+                                    </h2>
+                                    <div className="table-responsive" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                                        <table className="table table-hover align-middle">
+                                            <thead className="table-light">
+                                                <tr>
+                                                    <th className="text-uppercase small">Date</th>
+                                                    <th className="text-center text-uppercase small">Admissions</th>
+                                                    <th className="text-center text-uppercase small">Revenue</th>
+                                                    <th className="text-uppercase small">Details</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {dailyAdmissions.length > 0 ? (
+                                                    dailyAdmissions.map((day, index) => (
+                                                        <tr key={index} className={day.date === new Date().toLocaleDateString('en-IN') ? 'table-primary' : ''}>
+                                                            <td className="fw-medium">
+                                                                {day.date}
+                                                                {day.date === new Date().toLocaleDateString('en-IN') && (
+                                                                    <span className="ms-2 badge bg-primary">Today</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="text-center">
+                                                                <span className="h5 fw-bold text-success">{day.admissions}</span>
+                                                            </td>
+                                                            <td className="text-center fw-medium text-success">
+                                                                ₹{day.revenue.toLocaleString()}
+                                                            </td>
+                                                            <td>
+                                                                <div>
+                                                                    <div className="small text-muted">
+                                                                        Centers: {Object.entries(day.centers).map(([center, count]) =>
+                                                                            `${center} (${count})`
+                                                                        ).join(', ')}
+                                                                    </div>
+                                                                    <div className="small text-muted">
+                                                                        Counselors: {Object.entries(day.counselors).map(([counselor, count]) =>
+                                                                            `${counselor} (${count})`
+                                                                        ).join(', ')}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="4" className="text-center py-4 text-muted">
+                                                            No admissions data available
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                            {dailyAdmissions.length > 0 && (
+                                                <tfoot className="table-light">
+                                                    <tr>
+                                                        <td className="fw-semibold">Total</td>
+                                                        <td className="text-center fw-bold text-success">
+                                                            {dailyAdmissions.reduce((sum, day) => sum + day.admissions, 0)}
+                                                        </td>
+                                                        <td className="text-center fw-bold text-success">
+                                                            ₹{dailyAdmissions.reduce((sum, day) => sum + day.revenue, 0).toLocaleString()}
+                                                        </td>
+                                                        <td></td>
+                                                    </tr>
+                                                </tfoot>
+                                            )}
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="col-lg-6">
+                            <div className="card shadow-sm h-100">
+                                <div className="card-body">
+                                    <h2 className="h4 fw-semibold mb-4 d-flex align-items-center gap-2">
+                                        <TrendingUp className="text-indigo" size={20} />
+                                        Admission Trends (Last 7 Days)
+                                    </h2>
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <AreaChart data={admissionTrendData}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="date" />
+                                            <YAxis yAxisId="left" />
+                                            <YAxis yAxisId="right" orientation="right" />
+                                            <Tooltip
+                                                formatter={(value, name) => {
+                                                    if (name === 'revenue') return [`₹${value}k`, 'Revenue'];
+                                                    return [value, 'Admissions'];
+                                                }}
+                                            />
+                                            <Legend />
+                                            <Area
+                                                yAxisId="left"
+                                                type="monotone"
+                                                dataKey="admissions"
+                                                stroke="#10b981"
+                                                fill="#10b981"
+                                                fillOpacity={0.6}
+                                                name="Admissions"
+                                            />
+                                            <Area
+                                                yAxisId="right"
+                                                type="monotone"
+                                                dataKey="revenue"
+                                                stroke="#6366f1"
+                                                fill="#6366f1"
+                                                fillOpacity={0.3}
+                                                name="Revenue (₹k)"
+                                            />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                    <div className="row g-3 mt-3">
+                                        <div className="col-6">
+                                            <div className="text-center p-3 bg-success bg-opacity-10 rounded">
+                                                <p className="small text-muted mb-1">Today's Admissions</p>
+                                                <p className="h4 fw-bold text-success mb-0">
+                                                    {dailyAdmissions.find(d => d.date === new Date().toLocaleDateString('en-IN'))?.admissions || 0}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="col-6">
+                                            <div className="text-center p-3 bg-indigo bg-opacity-10 rounded">
+                                                <p className="small text-muted mb-1">Today's Revenue</p>
+                                                <p className="h4 fw-bold text-indigo mb-0">
+                                                    ₹{(dailyAdmissions.find(d => d.date === new Date().toLocaleDateString('en-IN'))?.revenue || 0).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* Followup Analytics */}
+                    {/* <div className="card shadow-sm">
+                        <div className="card-body">
+                            <h2 className="h4 fw-semibold mb-4 d-flex align-items-center gap-2">
+                                <Clock className="text-warning" size={20} />
+                                Follow-up Analytics
+                            </h2>
+                            <div className="row g-3">
+                                <div className="col-md-3 text-center">
+                                    <p className="text-muted small mb-1">Total Follow-ups</p>
+                                    <p className="h3 fw-bold">{followupStats.totalFollowups}</p>
+                                </div>
+                                <div className="col-md-3 text-center">
+                                    <p className="text-muted small mb-1">Completed</p>
+                                    <p className="h3 fw-bold text-success">{followupStats.doneFollowups}</p>
+                                </div>
+                                <div className="col-md-3 text-center">
+                                    <p className="text-muted small mb-1">Missed</p>
+                                    <p className="h3 fw-bold text-danger">{followupStats.missedFollowups}</p>
+                                </div>
+                                <div className="col-md-3 text-center">
+                                    <p className="text-muted small mb-1">Planned</p>
+                                    <p className="h3 fw-bold text-primary">{followupStats.plannedFollowups}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div> */}
+
+                    {/* ====== NEW: Course-Counsellor Status Table ====== */}
+                    {/* <div className="card shadow-sm mb-4">
+                        <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-center mb-4">
+                                <h2 className="h5 fw-semibold mb-0">Course-Counsellor Status Table</h2>
+
+                                
+                                <div className="d-flex gap-2 align-items-center">
+                                    <button
+                                        className="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
+                                        onClick={() => setShowCounsellorDatePicker(true)}
+                                        disabled={counsellorStatusLoading}
+                                    >
+                                        <CalendarDays size={16} />
+                                        {counsellorStatusDateFrom && counsellorStatusDateTo
+                                            ? `${counsellorStatusDateFrom} to ${counsellorStatusDateTo}`
+                                            : 'Select Date Range'
+                                        }
+                                    </button>
+                                    <button
+                                        className={`btn btn-sm ${showAllTime ? 'btn-success' : 'btn-outline-success'}`}
+                                        onClick={showAllTimeData}
+                                        disabled={counsellorStatusLoading}
+                                    >
+                                        All Time
+                                    </button>
+                                    <button
+                                        className="btn btn-outline-secondary btn-sm"
+                                        onClick={clearCounsellorStatusDateFilter}
+                                        disabled={counsellorStatusLoading}
+                                    >
+                                        Today
+                                    </button>
+                                </div>
+                            </div>
+                            {counsellorStatusLoading ? (
+                                <div className="text-center py-4">
+                                    <div className="spinner-border text-primary" role="status">
+                                        <span className="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p className="mt-3 text-muted">Loading counsellor status data...</p>
+                                </div>
+                            ) : counsellorStatusError ? (
+                                <div className="alert alert-danger">{counsellorStatusError}</div>
+                            ) : (
+                                <div className="table-responsive">
+                                    <table className="table table-bordered align-middle">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th>Project</th>
+                                                <th>Course</th>
+                                                <th>Center</th>
+                                                <th>Counsellor Name</th>
+                                                <th>Total Leads</th>
+                                                <th>Pending for KYC</th>
+                                                <th>KYC Done</th>
+                                                <th>Admission Done</th>
+                                                <th>Batch Assigned</th>
+                                                <th>In Zero Period</th>
+                                                <th>In Batch Freezed</th>
+                                                <th>DropOut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {Object.entries(groupedStatusData).length === 0 ? (
+                                                <tr><td colSpan={11} className="text-center">No data found</td></tr>
+                                            ) : (
+                                                Object.entries(groupedStatusData).map(([courseName, centers]) => {
+                                                    const courseRowSpan = Object.values(centers).reduce((sum, arr) => sum + arr.length, 0);
+                                                    let courseRendered = false;
+                                                    return Object.entries(centers).map(([centerName, counsellors], centerIdx) => {
+                                                        const centerRowSpan = counsellors.length;
+                                                        let centerRendered = false;
+                                                        return counsellors.map((row, idx) => {
+                                                            const renderCourse = !courseRendered;
+                                                            const renderCenter = !centerRendered;
+                                                            const tr = (
+                                                                <tr key={`${courseName}-${centerName}-${row.counsellorId || row.counsellorName}`}>
+                                                                    {renderCourse && (
+                                                                        <td rowSpan={courseRowSpan}>{row.projectName || ''}</td>
+                                                                    )}
+                                                                    {renderCourse && (
+                                                                        <td rowSpan={courseRowSpan}>{courseName}</td>
+                                                                    )}
+                                                                    {renderCenter && (
+                                                                        <td rowSpan={centerRowSpan}>{centerName}</td>
+                                                                    )}
+                                                                    <td>{row.counsellorName}</td>
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.totalLeadIds, 'Total Leads')}>{row.totalLeads}</td>
+
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.pendingKYCIds, 'Pending for KYC')}>{row.pendingKYC}</td>
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.kycDoneIds, 'KYC Done')}>{row.kycDone}</td>
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.admissionDoneIds, 'Admission Done')}>{row.admissionDone}</td>
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.batchAssignedIds, 'Batch Assigned')}>{row.batchAssigned}</td>
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.inZeroPeriodIds, 'In Zero Period')}>{row.inZeroPeriod}</td>
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.inBatchFreezedIds, 'In Batch Freezed')}>{row.inBatchFreezed}</td>
+                                                                    <td className="text-center" onClick={() => fetchLeadDetailsByIds(row.dropOutIds, 'DropOut')}>{row.dropOut}</td>
+                                                                    <td className="text-center">
+                                                                        {row.totalLeads > 0
+                                                                            ? ((row.admissionDoneIds.length / row.totalLeads) * 100).toFixed(1) + '%'
+                                                                            : '0%'}
+                                                                    </td>
+                                                                    <td className="text-center">
+                                                                        {row.inZeroPeriodIds && row.inZeroPeriodIds.length > 0
+                                                                            ? ((row.admissionDoneIds.length / row.inZeroPeriodIds.length) * 100).toFixed(1) + '%'
+                                                                            : '0%'}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                            if (!courseRendered) courseRendered = true;
+                                                            if (!centerRendered) centerRendered = true;
+                                                            return tr;
+                                                        });
+                                                    });
+                                                })
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div> */}
+                </>
+            )}
+
+            {/* Custom styles for Bootstrap colors not available by default */}
+            <style jsx>{`
+        .text-purple { color: #6f42c1; }
+        .text-indigo { color: #6610f2; }
+        .bg-purple { background-color: #6f42c1; }
+        .bg-indigo { background-color: #6610f2; }
+        .bg-indigo.bg-opacity-10 { background-color: rgba(102, 16, 242, 0.1); }
+        .bg-purple.bg-opacity-10 { background-color: rgba(111, 66, 193, 0.1); }
+        
+        /* Calendar styles */
+        .calendar-container table td {
+          width: 40px;
+          height: 35px;
+          vertical-align: middle;
+          transition: all 0.2s;
+        }
+        .calendar-container table td:hover {
+          background-color: #f0f0f0;
+          cursor: pointer;
+        }
+        .calendar-container .bg-primary {
+          border-radius: 4px;
+        }
+        .list-group-item {
+          border-left: 3px solid transparent;
+          transition: all 0.2s;
+        }
+        .list-group-item.active {
+          border-left-color: #0d6efd;
+          background-color: #e7f1ff;
+          color: #0a58ca;
+        }
+      `}</style>
+
+            {drilldown.open && (
+                <div className="card shadow-sm mb-4">
+                    <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                            <h5 className="mb-0">{drilldown.statusLabel} - Lead Details</h5>
+                            <button
+                                className="btn btn-sm btn-outline-secondary"
+                                onClick={() => setDrilldown({ open: false, loading: false, leads: [], group: null, statusType: '', statusLabel: '' })}
+                            >
+                                Close
+                            </button>
+                        </div>
+                        {drilldown.loading ? (
+                            <div className="text-center py-4">
+                                <div className="spinner-border text-primary" role="status"></div>
+                            </div>
+                        ) : drilldown.leads.length === 0 ? (
+                            <div className="text-center text-muted">No leads found.</div>
+                        ) : (
+                            <div className="table-responsive">
+                                <table className="table table-bordered align-middle">
+                                    <thead className="table-light">
+                                        <tr>
+                                            <th>Candidate Name</th>
+                                            <th>Mobile</th>
+                                            <th>Email</th>
+
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {drilldown.leads.map((lead, idx) => (
+                                            <tr key={idx}>
+                                                <td>{lead.candidateName}</td>
+                                                <td>{lead.candidateMobile}</td>
+                                                <td>{lead.candidateEmail ? lead.candidateEmail : 'NA'}</td>
+
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {!isFilterCollapsed && (
+                <div
+                    className="modal show fade d-block"
+                    style={{
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        zIndex: 1050
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsFilterCollapsed(true);
+                    }}
+                >
+                    <div className="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered mx-auto justify-content-center">
+                        <div className="modal-content">
+                            {/* Modal Header - Fixed at top */}
+                            <div className="modal-header bg-white border-bottom">
+                                <div className="d-flex justify-content-between align-items-center w-100">
+                                    <div className="d-flex align-items-center">
+                                        <i className="fas fa-filter text-primary me-2"></i>
+                                        <h5 className="fw-bold mb-0 text-dark">Advanced Filters</h5>
+                                        {totalSelected > 0 && (
+                                            <span className="badge bg-primary ms-2">
+                                                {totalSelected} Active
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="d-flex align-items-center gap-2">
+                                        <button
+                                            className="btn btn-sm btn-outline-danger"
+                                            onClick={clearAllFilters}
+                                        >
+                                            <i className="fas fa-times-circle me-1"></i>
+                                            Clear All
+                                        </button>
+                                        <button
+                                            className="btn-close"
+                                            onClick={() => setIsFilterCollapsed(true)}
+                                            aria-label="Close"
+                                        ></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Body - Scrollable content */}
+                            <div className="modal-body p-4">
+                                <div className="row g-4">
+                                    {/* Course Type Filter */}
+                                    <div className="col-md-3">
+                                        <label className="form-label small fw-bold text-dark">
+                                            <i className="fas fa-graduation-cap me-1 text-success"></i>
+                                            Course Type
+                                        </label>
+                                        <div className="position-relative">
+                                            <select
+                                                className="form-select"
+                                                name="courseType"
+                                                value={filterData.courseType}
+                                                onChange={handleFilterChange}
+                                            >
+                                                <option value="">All Types</option>
+                                                <option value="Free">🆓 Free</option>
+                                                <option value="Paid">💰 Paid</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Project Filter */}
+                                    <div className="col-md-3">
+                                        <MultiSelectCheckbox
+                                            title="Project"
+                                            options={projectOptions}
+                                            selectedValues={formData?.projects?.values}
+                                            onChange={(values) => handleCriteriaChange('projects', values)}
+                                            icon="fas fa-sitemap"
+                                            isOpen={dropdownStates.projects}
+                                            onToggle={() => toggleDropdown('projects')}
+                                        />
+                                    </div>
+
+                                    {/* Verticals Filter */}
+                                    <div className="col-md-3">
+                                        <MultiSelectCheckbox
+                                            title="Verticals"
+                                            options={verticalOptions}
+                                            selectedValues={formData?.verticals?.values || []}
+                                            icon="fas fa-sitemap"
+                                            isOpen={dropdownStates.verticals}
+                                            onToggle={() => toggleDropdown('verticals')}
+                                            onChange={(values) => handleCriteriaChange('verticals', values)}
+                                        />
+                                    </div>
+
+                                    {/* Course Filter */}
+                                    <div className="col-md-3">
+                                        <MultiSelectCheckbox
+                                            title="Course"
+                                            options={courseOptions}
+                                            selectedValues={formData?.course?.values || []}
+                                            onChange={(values) => handleCriteriaChange('course', values)}
+                                            icon="fas fa-graduation-cap"
+                                            isOpen={dropdownStates.course}
+                                            onToggle={() => toggleDropdown('course')}
+                                        />
+                                    </div>
+
+                                    {/* Center Filter */}
+                                    <div className="col-md-3">
+                                        <MultiSelectCheckbox
+                                            title="Center"
+                                            options={centerOptions}
+                                            selectedValues={formData?.center?.values || []}
+                                            onChange={(values) => handleCriteriaChange('center', values)}
+                                            icon="fas fa-building"
+                                            isOpen={dropdownStates.center}
+                                            onToggle={() => toggleDropdown('center')}
+                                        />
+                                    </div>
+
+                                    {/* Counselor Filter */}
+                                    <div className="col-md-3">
+                                        <MultiSelectCheckbox
+                                            title="Counselor"
+                                            options={counselorOptions}
+                                            selectedValues={formData?.counselor?.values || []}
+                                            onChange={(values) => handleCriteriaChange('counselor', values)}
+                                            icon="fas fa-user-tie"
+                                            isOpen={dropdownStates.counselor}
+                                            onToggle={() => toggleDropdown('counselor')}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Date Filters Section */}
+                                <div className="row g-4 mt-3">
+                                    <div className="col-12">
+                                        <h6 className="text-dark fw-bold mb-3">
+                                            <i className="fas fa-calendar-alt me-2 text-primary"></i>
+                                            Date Range Filters
+                                        </h6>
+                                    </div>
+
+                                    {/* Single Date Range Filter */}
+                                    <div className="col-md-6">
+                                        <label className="form-label small fw-bold text-dark">
+                                            <i className="fas fa-calendar-plus me-1 text-success"></i>
+                                            Date Range
+                                        </label>
+                                        <div className="card border-0 bg-light p-3">
+                                            <div className="row g-2">
+                                                <div className="col-6">
+                                                    <label className="form-label small">From Date</label>
+                                                    <DatePicker
+                                                        onChange={(date) => handleDateFilterChange(date, 'createdFromDate')}
+                                                        value={filterData.createdFromDate}
+                                                        format="dd/MM/yyyy"
+                                                        className="form-control p-0"
+                                                        clearIcon={null}
+                                                        calendarIcon={<i className="fas fa-calendar text-success"></i>}
+                                                        maxDate={filterData.createdToDate || new Date()}
+                                                    />
+                                                </div>
+                                                <div className="col-6">
+                                                    <label className="form-label small">To Date</label>
+                                                    <DatePicker
+                                                        onChange={(date) => handleDateFilterChange(date, 'createdToDate')}
+                                                        value={filterData.createdToDate}
+                                                        format="dd/MM/yyyy"
+                                                        className="form-control p-0"
+                                                        clearIcon={null}
+                                                        calendarIcon={<i className="fas fa-calendar text-success"></i>}
+                                                        minDate={filterData.createdFromDate}
+                                                        maxDate={new Date()}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Show selected dates */}
+                                            {(filterData.createdFromDate || filterData.createdToDate) && (
+                                                <div className="mt-2 p-2 bg-success bg-opacity-10 rounded">
+                                                    <small className="text-success">
+                                                        <i className="fas fa-info-circle me-1"></i>
+                                                        <strong>Selected:</strong>
+                                                        {filterData.createdFromDate && ` From ${formatDate(filterData.createdFromDate)}`}
+                                                        {filterData.createdFromDate && filterData.createdToDate && ' |'}
+                                                        {filterData.createdToDate && ` To ${formatDate(filterData.createdToDate)}`}
+                                                    </small>
+                                                </div>
+                                            )}
+
+                                            {/* Clear button */}
+                                            <div className="mt-2">
+                                                <button
+                                                    className="btn btn-sm btn-outline-danger w-100"
+                                                    onClick={() => clearDateFilter('created')}
+                                                    disabled={!filterData.createdFromDate && !filterData.createdToDate}
+                                                >
+                                                    <i className="fas fa-times me-1"></i>
+                                                    Clear Date Filter
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Results Summary */}
+                                <div className="row mt-4">
+                                    <div className="col-12">
+                                        <div className="alert alert-info">
+                                            <div className="d-flex align-items-center">
+                                                <i className="fas fa-info-circle me-2"></i>
+                                                <div>
+
+                                                    {/* Active filter indicators */}
+                                                    <div className="mt-2">
+                                                        {(filterData.createdFromDate || filterData.createdToDate) && (
+                                                            <span className="badge bg-success me-2">
+                                                                <i className="fas fa-calendar-plus me-1"></i>
+                                                                Created Date Filter Active
+                                                            </span>
+                                                        )}
+
+                                                        {(filterData.modifiedFromDate || filterData.modifiedToDate) && (
+                                                            <span className="badge bg-warning me-2">
+                                                                <i className="fas fa-calendar-edit me-1"></i>
+                                                                Modified Date Filter Active
+                                                            </span>
+                                                        )}
+
+                                                        {(filterData.nextActionFromDate || filterData.nextActionToDate) && (
+                                                            <span className="badge bg-info me-2">
+                                                                <i className="fas fa-calendar-check me-1"></i>
+                                                                Next Action Date Filter Active
+                                                            </span>
+                                                        )}
+
+                                                        {totalSelected > 0 && (
+                                                            <span className="badge bg-primary me-2">
+                                                                <i className="fas fa-filter me-1"></i>
+                                                                {totalSelected} Multi-Select Filters Active
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer - Fixed at bottom */}
+                            <div className="modal-footer bg-light border-top">
+                                <div className="d-flex justify-content-between align-items-center w-100">
+                                    <div className="text-muted small">
+                                        <i className="fas fa-filter me-1"></i>
+                                        {Object.values(filterData).filter(val => val && val !== 'true').length + totalSelected} filters applied
+                                    </div>
+                                    <div className="d-flex gap-2">
+                                        <button
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => setIsFilterCollapsed(true)}
+                                        >
+                                            <i className="fas fa-eye-slash me-1"></i>
+                                            Hide Filters
+                                        </button>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => {
+                                                fetchProfileData(filterData);
+                                                setIsFilterCollapsed(true);
+                                            }}
+                                        >
+                                            <i className="fas fa-search me-1"></i>
+                                            Apply Filters
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <style>
+                {
+
+                    `
+          
+    /* Enhanced Multi-Select Dropdown Styles */
+.multi-select-container-new {
+  position: relative;
+  width: 100%;
+}
+
+.multi-select-dropdown-new {
+  position: relative;
+  width: 100%;
+}
+
+.multi-select-trigger {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background: white !important;
+  border: 1px solid #ced4da !important;
+  border-radius: 0.375rem !important;
+  padding: 0.375rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  min-height: 38px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  width: 100% !important;
+}
+
+.multi-select-trigger:hover {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15) !important;
+}
+
+.multi-select-trigger.open {
+  border-color: #86b7fe !important;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.select-display-text {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #495057;
+  font-weight: normal;
+}
+
+.dropdown-arrow {
+  color: #6c757d;
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
+.multi-select-trigger.open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.multi-select-options-new {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  background: white;
+  border: 1px solid #ced4da;
+  border-top: none;
+  border-radius: 0 0 0.375rem 0.375rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  max-height: 320px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.options-header {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+  background: #f8f9fa;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.select-all-btn,
+.clear-all-btn {
+  font-size: 0.75rem !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 0.25rem !important;
+  border: 1px solid !important;
+}
+
+.select-all-btn {
+  border-color: #0d6efd !important;
+  color: #0d6efd !important;
+}
+
+.clear-all-btn {
+  border-color: #6c757d !important;
+  color: #6c757d !important;
+}
+
+.select-all-btn:hover {
+  background-color: #0d6efd !important;
+  color: white !important;
+}
+
+.clear-all-btn:hover {
+  background-color: #6c757d !important;
+  color: white !important;
+}
+
+.options-search {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.options-list-new {
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.options-list-new::-webkit-scrollbar {
+  width: 6px;
+}
+
+.options-list-new::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.options-list-new::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.options-list-new::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.option-item-new {
+  display: flex !important;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  margin: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.option-item-new:last-child {
+  border-bottom: none;
+}
+
+.option-item-new:hover {
+  background-color: #f8f9fa;
+}
+
+.option-item-new input[type="checkbox"] {
+  margin: 0 0.5rem 0 0 !important;
+  cursor: pointer;
+  accent-color: #0d6efd;
+}
+
+.option-label-new {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #495057;
+  cursor: pointer;
+}
+
+.options-footer {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid #e9ecef;
+  background: #f8f9fa;
+  text-align: center;
+}
+
+.no-options {
+  padding: 1rem;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Close dropdown when clicking outside */
+.multi-select-container-new.dropdown-open::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+}
+
+/* Focus states for accessibility */
+.multi-select-trigger:focus {
+  outline: none;
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.option-item-new input[type="checkbox"]:focus {
+  outline: 2px solid #86b7fe;
+  outline-offset: 2px;
+}
+
+/* Selected state styling */
+.option-item-new input[type="checkbox"]:checked + .option-label-new {
+  font-weight: 500;
+  color: #0d6efd;
+}
+
+/* Badge styling for multi-select */
+.badge.bg-primary {
+  background-color: #0d6efd !important;
+  font-size: 0.75rem;
+  padding: 0.25em 0.4em;
+}
+
+/* Animation for dropdown open/close */
+.multi-select-options-new {
+  transform-origin: top;
+  animation: dropdownOpen 0.15s ease-out;
+}
+
+@keyframes dropdownOpen {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* Prevent text selection on dropdown trigger */
+.multi-select-trigger {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Enhanced visual feedback */
+.multi-select-trigger:active {
+  transform: translateY(1px);
+}
+
+/* Loading state (if needed) */
+.multi-select-loading {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.multi-select-loading .dropdown-arrow {
+  animation: spin 1s linear infinite;
+}
+.react-calendar{
+width:min-content !important;
+height:min-content !important;
+}
+@media (max-width: 768px) {
+  .multi-select-options-new {
+    max-height: 250px;
+  }
+  
+  .options-header {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .select-all-btn,
+  .clear-all-btn {
+    width: 100%;
+  }
+  
+  .options-list-new {
+    max-height: 150px;
+  }
+  .marginTopMobile {
+    margin-top: 340px !important;
+  }
+   .nav-tabs-main{
+                  white-space: nowrap;
+                  flex-wrap: nowrap;
+                  overflow: scroll;
+                  scrollbar-width: none;
+                  -ms-overflow-style: none;
+                  &::-webkit-scrollbar {
+                    display: none;
+                  }
+              }
+              .nav-tabs-main > li > button{
+              padding: 15px 9px;
+              }
+}
+text tspan{
+font-size: 15px !important;
+}
+   
+            `
+                }
+
+            </style>
+        </div>
+
+
+    );
+};
+
+export default LeadAnalyticsDashboard;
