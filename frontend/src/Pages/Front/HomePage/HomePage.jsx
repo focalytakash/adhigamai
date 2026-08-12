@@ -96,7 +96,7 @@ function ContactSection() {
               </span>
               <div>
                 <h3>Email</h3>
-                <a href="mailto:info@adhigamai.com">info@adhigamai.com</a>
+                <a href="mailto:info@adhigamai.com">info@adhigamai.in</a>
               </div>
             </div>
             {/* <div className="contact-info-card">
