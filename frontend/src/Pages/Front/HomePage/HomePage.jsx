@@ -6,7 +6,7 @@ import { resolveMediaUrl } from "../../../utils/resolveMediaUrl";
 import axios from "axios";
 import moment from "moment";
 import L from "leaflet";
-
+import Carousel from '../Carousel/Carousel';
 import "leaflet/dist/leaflet.css";
 import {Award,BarChart3,Bot,Brain,Briefcase,Building,Car,Check,Cloud,Code,Cpu,Droplet,Factory,FlaskConical,Glasses,Globe,Handshake,Mail,Image as ImageIcon,Laptop,Leaf,Lightbulb,LineChart,MapPin,Plane,Radio,Recycle,School, Settings2,Shield,Smartphone,Sparkles, MessageCircle,Sprout, Star, Sun,Target,Trees,TrendingUp,Tractor,User, Users,Wifi,Zap,} from "lucide-react";
 
@@ -96,7 +96,7 @@ function ContactSection() {
               </span>
               <div>
                 <h3>Email</h3>
-                <a href="mailto:info@adhigamai.com">info@adhigamai.in</a>
+                <a href="mailto:info@adhigamai.ai">info@adhigamai.ai</a>
               </div>
             </div>
             {/* <div className="contact-info-card">
@@ -381,7 +381,12 @@ function HeroSection() {
     </div>
   </div>
 </section>
-
+<section className="events-carousel-section" aria-label="Events">
+  <div className="events-carousel-head wrap">
+    <h2 className="section-title">Events</h2>
+  </div>
+  <Carousel />
+</section>
 {/* WHY SCHOOLS CHOOSE  */}
 <section className="section" style={{ paddingTop: 96 }}>
   <div className="wrap">
@@ -890,6 +895,7 @@ function HomePage() {
     <FrontLayout>
       <div className="foc-cyber-home hp-theme">
        
+   
         <HeroSection />
 
   

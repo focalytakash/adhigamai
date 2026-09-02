@@ -12,6 +12,24 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
 import { subYears } from "date-fns";
+const isLocalCandidateBypass =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const applyCandidateLoginBypass = () => {
+    const mockUser = {
+        _id: 'dev-bypass-user',
+        name: 'Dev Candidate',
+        mobile: '9999999999',
+        email: 'dev@localhost',
+    };
+    localStorage.setItem('name', mockUser.name);
+    localStorage.setItem('candidate', mockUser.name);
+    localStorage.setItem('token', 'dev-bypass-token');
+    sessionStorage.setItem('user', JSON.stringify(mockUser));
+    sessionStorage.setItem('candidate', JSON.stringify(mockUser));
+};
+
 const CandidateLogin = () => {
     const urlLocation = useLocation();
     const queryParams = new URLSearchParams(urlLocation.search);
@@ -73,6 +91,12 @@ const CandidateLogin = () => {
 
     // Redirect if user is already logged in
     useEffect(() => {
+        if (isLocalCandidateBypass) {
+            applyCandidateLoginBypass();
+            window.location.href = returnUrl || '/candidate/searchjob';
+            return;
+        }
+
         if (user) {
             if (returnUrl) {
                 // ✅ Preserve refCode in returnUrl if present in login URL

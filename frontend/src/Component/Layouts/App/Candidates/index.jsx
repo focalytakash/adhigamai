@@ -5,7 +5,7 @@ import CandidateFooter from './CandidateFooter/CandidateFooter'
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
-import User from './StepContainer/User';
+// import User from './StepContainer/User';
 import axios from 'axios'
 
 import {
@@ -17,6 +17,25 @@ import {
   faPaperPlane as farPaperPlane, faMap as farMap, faHand as farHand, faBookmark as farBookmark, 
   faCircle as farCircle, faCirclePlay as farCirclePlay, faShareFromSquare as farShareFromSquare, faBell as farBell, faMoneyBill1 as farMoneyBill1,
 } from "@fortawesome/free-regular-svg-icons";
+
+const isLocalCandidateBypass =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const applyCandidateLoginBypass = () => {
+  const mockUser = {
+    _id: 'dev-bypass-user',
+    name: 'Dev Candidate',
+    mobile: '9999999999',
+    email: 'dev@localhost',
+  };
+  localStorage.setItem('name', mockUser.name);
+  localStorage.setItem('candidate', mockUser.name);
+  localStorage.setItem('token', 'dev-bypass-token');
+  sessionStorage.setItem('user', JSON.stringify(mockUser));
+  sessionStorage.setItem('candidate', JSON.stringify(mockUser));
+  return mockUser;
+};
 
 function CandidateLayout({ children }) {
   const navigate = useNavigate();
@@ -67,8 +86,13 @@ function CandidateLayout({ children }) {
     const fetchProfile = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (isLocalCandidateBypass) {
+          setShowProfileForm(true);
+          return;
+        }
         if (!token) {
           navigate('/candidate/login');
+          return;
         }
 
         const response = await axios.get(`${backendUrl}/candidate/getProfile`, {
@@ -109,6 +133,8 @@ function CandidateLayout({ children }) {
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
       setUser(parsed);
+    } else if (isLocalCandidateBypass) {
+      setUser(applyCandidateLoginBypass());
     } else {
       navigate('/candidate/login');
     }
@@ -884,271 +910,17 @@ function CandidateLayout({ children }) {
                   <span className="menu-title">Dashboard</span>
                 </Link>
               </li>
-
-              {/* Profile */}
-              <li className={`nav-item has-sub dropdown-profile ${openSubmenu.profile ? 'open' : ''} ${location.pathname === '/candidate/myprofile' ? 'open' : ''}`}>
-                <a href="#" onClick={() => toggleSubmenu('profile')}>
-                  <FontAwesomeIcon icon={faUser} />
-                  <span className="menu-title">Profile</span>
-                  <span className="dropdown-arrow">
-                    <FontAwesomeIcon
-                      icon={faChevronRight}
-                      style={{fontSize: '12px'}}
-                      className={`chevron-icon ${openSubmenu.profile ? 'rotate-90' : ''}`}
-                    />
-                  </span>
-                </a>
-                <ul
-                  ref={menuRefs.profile}
-                  className="menu-content"
-                  style={{
-                    maxHeight: submenuMaxHeight.profile,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease-in-out,'
-                  }}
-                >
-                  <li className={`nav-item ${location.pathname === '/candidate/myProfile' ? 'active' : ''}`}>
-                    <Link to="/candidate/myProfile" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={faUser} />
-                      <span className="menu-title">Your Profile</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/document' ? 'active' : ''}`}>
-                    <Link to="/candidate/document" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farFile} />
-                      <span className="menu-title">Documents</span>
-                    </Link>
-                  </li>
-                </ul>
-              </li>
-
-              {/* Courses */}
-              <li className={`nav-item has-sub dropdown-courses ${openSubmenu.courses ? 'open' : ''}`}>
-                <a href="#" onClick={() => toggleSubmenu('courses')}>
-                  <FontAwesomeIcon icon={farUser} />
-                  <span className="menu-title">Courses</span>
-                  <span className="dropdown-arrow">
-                    <FontAwesomeIcon
-                      icon={faChevronRight}
-                      style={{fontSize: '12px'}}
-                      className={`chevron-icon ${openSubmenu.courses ? 'rotate-90' : ''}`}
-                    />
-                  </span>
-                </a>
-                <ul
-                  ref={menuRefs.courses}
-                  className="menu-content"
-                  style={{
-                    maxHeight: submenuMaxHeight.courses,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease-in-out'
-                  }}
-                >
-                  <li className={`nav-item ${location.pathname === '/candidate/searchcourses' ? 'active' : ''}`}>
-                    <Link to="/candidate/searchcourses" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={faSearch} />
-                      <span className="menu-title">Search Courses</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/appliedCourses' ? 'active' : ''}`}>
-                    <Link to="/candidate/appliedCourses" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farPaperPlane} />
-                      <span className="menu-title">Applied Course</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/enrolledCourses' ? 'active' : ''}`}>
-                    <Link to="/candidate/enrolledCourses" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farPaperPlane} />
-                      <span className="menu-title">Enrolled Course</span>
-                    </Link>
-                  </li>
-                </ul>
-              </li>
-
-              {/* Jobs */}
-              <li className={`nav-item has-sub dropdown-jobs ${openSubmenu.jobs ? 'open' : ''}`}>
-                <a href="#" onClick={() => toggleSubmenu('jobs')}>
-                  <FontAwesomeIcon icon={faClipboardList} />
-                  <span className="menu-title">Jobs</span>
-                  <span className="dropdown-arrow">
-                    <FontAwesomeIcon
-                      icon={faChevronRight}
-                      style={{fontSize: '12px'}}
-                      className={`chevron-icon ${openSubmenu.jobs ? 'rotate-90' : ''}`}
-                    />
-                  </span>
-                </a>
-                <ul
-                  ref={menuRefs.jobs}
-                  className="menu-content"
-                  style={{
-                    maxHeight: submenuMaxHeight.jobs,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease-in-out'
-                  }}
-                >
-                  <li className={`nav-item ${location.pathname === '/candidate/searchjob' ? 'active' : ''}`}>
-                    <Link to="/candidate/searchjob" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={faSearch} />
-                      <span className="menu-title">Search Job</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/nearbyJobs' ? 'active' : ''}`}>
-                    <Link to="/candidate/nearbyJobs" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farMap} />
-                      <span className="menu-title">Jobs Near Me</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/Joboffer' ? 'active' : ''}`}>
-                    <Link to="/candidate/joboffer" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farMap} />
-                      <span className="menu-title">Jobs Offer</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/appliedJobs' ? 'active' : ''}`}>
-                    <Link to="/candidate/appliedJobs" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farPaperPlane} />
-                      <span className="menu-title">Applied Jobs</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/registerInterviewsList' ? 'active' : ''}`}>
-                    <Link to="/candidate/registerInterviewsList" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farHand} />
-                      <span className="menu-title">Register For Interview</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/InterestedCompanies' ? 'active' : ''}`}>
-                    <Link to="/candidate/InterestedCompanies" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farBookmark} />
-                      <span className="menu-title">Shortlisting</span>
-                    </Link>
-                  </li>
-                </ul>
-              </li>
-
-              {/* Wallet */}
-              <li className={`nav-item has-sub dropdown-wallet ${openSubmenu.wallet ? 'open' : ''}`}>
-                <a href="#" onClick={() => toggleSubmenu('wallet')}>
-                  <FontAwesomeIcon icon={faWallet} />
-                  <span className="menu-title">Wallet</span>
-                  <span className="dropdown-arrow">
-                    <FontAwesomeIcon
-                      icon={faChevronRight}
-                      style={{fontSize: '12px'}}
-                      className={`chevron-icon ${openSubmenu.wallet ? 'rotate-90' : ''}`}
-                    />
-                  </span>
-                </a>
-                <ul
-                  ref={menuRefs.wallet}
-                  className="menu-content"
-                  style={{
-                    maxHeight: submenuMaxHeight.wallet,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease-in-out'
-                  }}
-                >
-                  {/* <li className={`nav-item ${location.pathname === '/candidate/cashback' ? 'active' : ''}`}>
-                    <Link to="/candidate/cashback" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={faIndianRupeeSign} />
-                      <span className="menu-title">Cashback Offers</span>
-                    </Link>
-                  </li> */}
-                  <li className={`nav-item ${location.pathname === '/candidate/myEarnings' ? 'active' : ''}`}>
-                    <Link to="/candidate/myEarnings" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farMoneyBill1} />
-                      <span className="menu-title">My Earnings</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/myAchievement' ? 'active' : ''}`}>
-                    <Link to="/candidate/myAchievement" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farMoneyBill1} />
-                      <span className="menu-title">My Achievement</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/referral' ? 'active' : ''}`}>
-                    <Link to="/candidate/referral" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={faForward} />
-                      <span className="menu-title">Refer & Earn</span>
-                    </Link>
-                  </li>
-                  {/* <li className={`nav-item ${location.pathname === '/candidate/Coins' ? 'active' : ''}`}>
-                    <Link to="/candidate/Coins" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={faCoins} />
-                      <span className="menu-title">Coins</span>
-                    </Link>
-                  </li> */}
-                </ul>
-              </li>
-
-              {/* Events */}
-              <li className={`nav-item has-sub dropdown-events ${openSubmenu.events ? 'open' : ''}`}>
-                <a href="#" onClick={() => toggleSubmenu('events')}>
-                  <FontAwesomeIcon icon={faCalendarAlt} />
-                  <span className="menu-title">Events</span>
-                  <span className="dropdown-arrow">
-                    <FontAwesomeIcon
-                      icon={faChevronRight}
-                      className={`chevron-icon ${openSubmenu.events ? 'rotate-90' : ''}`}
-                      style={{fontSize: '12px'}}
-                    />
-                  </span>
-                </a>
-                <ul
-                  ref={menuRefs.events}
-                  className="menu-content"
-                  style={{
-                    maxHeight: submenuMaxHeight.events,
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease-in-out'
-                  }}
-                >
-                  <li className={`nav-item ${location.pathname === '/candidate/candidateevent' ? 'active' : ''}`}>
-                    <Link to="/candidate/candidateevent" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farCircle} />
-                      <span className="menu-title">Event</span>
-                    </Link>
-                  </li>
-                  <li className={`nav-item ${location.pathname === '/candidate/appliedevents' ? 'active' : ''}`}>
-                    <Link to="/candidate/appliedevents" onClick={() => { handleSidebarClose(); }}>
-                      <FontAwesomeIcon icon={farCircle} />
-                      <span className="menu-title">Applied Event</span>
-                    </Link>
-                  </li>
-                </ul>
-              </li>
-
-              {/* Request Loan */}
-              {/* <li className={`nav-item ${location.pathname === '/candidate/requestLoan' ? 'active' : ''}`}>
-                <Link to="/candidate/requestLoan" onClick={() => { handleSidebarClose(); }}>
-                  <FontAwesomeIcon icon={farCircle} />
-                  <span className="menu-title">Request Loan</span>
-                </Link>
-              </li> */}
-
-              {/* Watch Videos */}
-              <li className={`nav-item ${location.pathname === '/candidate/watchVideos' ? 'active' : ''}`}>
-                <Link to="/candidate/watchVideos" onClick={() => { handleSidebarClose(); }}>
-                  <FontAwesomeIcon icon={farCirclePlay} />
-                  <span className="menu-title">Watch Videos</span>
+              <li className={`nav-item ${location.pathname === '/candidate/searchcourses' ? 'active' : ''}`}>
+                <Link to="/candidate/searchcourses" onClick={() => { handleSidebarClose(); }}>
+                  <FontAwesomeIcon icon={faSearch} />
+                  <span className="menu-title">My Courses</span>
                 </Link>
               </li>
 
-              {/* Share Profile */}
-              <li className={`nav-item ${location.pathname === '/candidate/shareCV' ? 'active' : ''}`}>
-                <Link to="/candidate/shareCV" onClick={() => { handleSidebarClose(); }}>
-                  <FontAwesomeIcon icon={farShareFromSquare} />
-                  <span className="menu-title">Share Profile</span>
-                </Link>
-              </li>
-
-              {/* Notifications */}
-              <li className={`nav-item ${location.pathname === '/candidate/notifications' ? 'active' : ''}`}>
-                <Link to="/candidate/notifications" onClick={() => { handleSidebarClose(); }}>
-                  <FontAwesomeIcon icon={farBell} />
-                  <span className="menu-title">Notifications</span>
-                </Link>
-              </li>
+                    
+            
+                
+     
             </ul>
           </div>
         </div>
@@ -1161,46 +933,6 @@ function CandidateLayout({ children }) {
             <div className="header-navbar-shadow"></div>
             <CandidateHeader toggleSidebar={handleSidebarToggle} isSideBarOpen={isSidebarOpen} />
             <div className="content-wrapper">
-              <div className="mt-2 mb-2">
-
-                {!showProfileForm && (
-                  <div className="vertical-layout vertical-menu-modern 2-columns navbar-floating footer-static"
-                  data-open="click" data-menu="vertical-menu-modern" data-col="2-columns" id="inner_job_page">
-        
-                  <div className="">
-                    <CandidateHeader toggleSidebar={handleSidebarToggle} isSideBarOpen={isSidebarOpen} />
-                    <div className="content-wrapper">
-                      <div className="mt-2 mb-2">
-        
-                      
-                          <div className="modal fade show popmodel"
-                            style={{ display: 'block' }}
-                            tabIndex="-1"
-                            aria-modal="true"
-                            role="dialog"
-                            data-bs-backdrop="static"
-                            data-bs-keyboard="false">
-                            <div className="fade show"></div>
-                            <div className="modal-dialog modal-dialog-centered modal-lg">
-                              <div className="modal-content">
-                                
-                                <div className="modal-body">
-                                  <User handleSaveCV={handleSaveCV} onCloseModal={() => setShowProfileForm(true)} />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                      
-                      </div>
-                      <div className="content-body mb-4">
-                        <Outlet />
-                      </div>
-                      <CandidateFooter />
-                    </div>
-                  </div>
-                </div>
-                 )} 
-              </div>
               <div className="content-body mb-4">
                 <Outlet />
               </div>

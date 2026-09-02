@@ -29,7 +29,7 @@
     "feather-icons": "^4.29.2",
     "file-saver": "^2.0.5",
     "formik": "^2.4.6",
-    "gsap": "^3.13.0",
+    "gsap": "^3.15.0",
     "html2pdf.js": "^0.10.3",
     "i18next": "^25.8.18",
     "jquery": "^3.7.1",
@@ -94,6 +94,9 @@
     ]
   },
   "devDependencies": {
-    "ajv": "^8.17.1"
+    "ajv": "^8.17.1",
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^3.4.19"
   }
 }

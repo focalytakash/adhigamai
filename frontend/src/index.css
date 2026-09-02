@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
   margin: 0;
   font-family: var(--foc-font-sans);
@@ -10,10 +14,6 @@ body {
 }
 a{
   text-decoration: none!important;
-}
-p, ul, li {
-  margin: 0!important;
-  padding: 0!important;
 }
 code {
   font-family: var(--foc-font-mono);

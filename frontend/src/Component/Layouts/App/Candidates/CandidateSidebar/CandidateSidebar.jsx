@@ -60,6 +60,15 @@ const CandidateSidebar = () => {
             </NavLink>
           </li>
 
+          <li className="nav-item">
+            <NavLink to="/candidate/searchcourses" className={({ isActive }) => isActive ? "active" : ""}>
+              <div className="nav-item-content">
+                <FontAwesomeIcon icon={faSearch} />
+                <span>Search Courses</span>
+              </div>
+            </NavLink>
+          </li>
+
           {/* Profile Dropdown */}
           <li className={`nav-item ${openDropdown === "profile" ? "open" : ""}`}>
             <button className="dropdown-btn" onClick={() => toggleDropdown("profile")}>
