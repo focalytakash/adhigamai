@@ -30,6 +30,7 @@ import SearchCourseDetail from "./Pages/App/Candidate/Courses/SearchCourseDetail
 import CandidateNotification from './Pages/App/Candidate/Notification/CandidateNotification';
 
 import Event from './Pages/Front/Event/Event';
+import Hackathon from './Pages/Front/Hackathon/Hackathon';
 import CandidateLogin from './Pages/App/Candidate/Login/CandidateLogin';
 import Regitrationsold from './Pages/App/College/Course/Registrationsold'
 import CollegeLayout from './Component/Layouts/App/College';
@@ -86,6 +87,7 @@ const Layout = () => {
         <Route exact path="/contact" element={<Contact />} />
         <Route exact path="/cmp/login" element={<CompanyLogin />} />
         <Route path="/events" element={<Event />} />
+        <Route path="/hackathon" element={<Hackathon />} />
 
         {/* Candidate Parent Route */}
         <Route path="/candidate/login" element={<CandidateLogin />} />
