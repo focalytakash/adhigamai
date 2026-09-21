@@ -5,5 +5,6 @@ const { upload } = require('../middleware/upload');
 const router = express.Router();
 
 router.post('/', upload.single('ppt'), hackathonController.createRegistration);
+router.post('/query', hackathonController.createQuery);
 
 module.exports = router;

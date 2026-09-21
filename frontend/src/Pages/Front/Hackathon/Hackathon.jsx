@@ -1,19 +1,12 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Minus, Plus, Upload } from "lucide-react";
 import axios from "axios";
 import siteConfig from "../../../config/siteConfig";
+import { PROBLEM_GROUPS } from "./problemStatements";
 import "../HomePage/HeroSection.css";
 import "./Hackathon.css";
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-const CATEGORIES = [
-  "Healthcare",
-  "Education",
-  "Fintech",
-  "Sustainability & Climate",
-  "Agriculture",
-  "Open Innovation",
-];
 const STEPS = [
   { n: 1, label: "Team" },
   { n: 2, label: "Members" },
@@ -54,6 +47,10 @@ function Field({ label, error, children }) {
 
 const Hackathon = () => {
   const { logo, logoAlt, name } = siteConfig.branding;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, []);
   const backendUrl = process.env.REACT_APP_ADHIGAM_BACKEND_URL;
   const bucketUrl = process.env.REACT_APP_ADHIGAM_BUCKET_URL;
   const fileRef = useRef(null);
@@ -76,6 +73,7 @@ const Hackathon = () => {
   const [memberCount, setMemberCount] = useState(3);
   const [members, setMembers] = useState(() => makeMembers(3));
   const [project, setProject] = useState({
+    problemGroup: "",
     category: "",
     projectTitle: "",
     problemDesc: "",
@@ -85,6 +83,15 @@ const Hackathon = () => {
   const [pptFile, setPptFile] = useState(null);
   const [decl1, setDecl1] = useState(false);
   const [decl2, setDecl2] = useState(false);
+
+  const selectedGroup = useMemo(
+    () => PROBLEM_GROUPS.find((group) => group.group === project.problemGroup) || null,
+    [project.problemGroup]
+  );
+  const selectedProblem = useMemo(
+    () => selectedGroup?.items.find((item) => item.value === project.category) || null,
+    [selectedGroup, project.category]
+  );
 
   const updateTeam = (key, value) => {
     setTeam((prev) => ({ ...prev, [key]: value }));
@@ -140,7 +147,8 @@ const Hackathon = () => {
     }
 
     if (n === 3) {
-      if (!project.category) next.category = "Please select a category.";
+      if (!project.problemGroup) next.problemGroup = "Please select a category.";
+      if (!project.category) next.category = "Please select a problem statement.";
       if (!project.projectTitle.trim()) next.projectTitle = "Please enter a project title.";
       if (!project.problemDesc.trim()) next.problemDesc = "Please describe the problem.";
       if (!project.solution.trim()) next.solution = "Please describe your solution.";
@@ -180,7 +188,8 @@ const Hackathon = () => {
     formData.append("collegeName", team.collegeName.trim());
     formData.append("course", team.course.trim());
     formData.append("yearOfStudy", team.yearOfStudy);
-    formData.append("category", project.category);
+    formData.append("category", project.problemGroup);
+    formData.append("problemStatement", selectedProblem?.label || "");
     formData.append("projectTitle", project.projectTitle.trim());
     formData.append("problemDesc", project.problemDesc.trim());
     formData.append("solution", project.solution.trim());
@@ -432,21 +441,44 @@ const Hackathon = () => {
                 <div className="hackathon-step-title">Project details</div>
                 <div className="hackathon-step-desc">Give us a sense of what you&apos;re building.</div>
 
-                <Field label="Problem statement / category" error={errors.category}>
+                <Field label="Category" error={errors.problemGroup}>
                   <select
-                    className={errors.category ? "err" : ""}
-                    value={project.category}
-                    onChange={(e) => updateProject("category", e.target.value)}
+                    className={errors.problemGroup ? "err" : ""}
+                    value={project.problemGroup}
+                    onChange={(e) => {
+                      const group = e.target.value;
+                      setProject((prev) => ({ ...prev, problemGroup: group, category: "" }));
+                      setErrors((prev) => ({ ...prev, problemGroup: undefined, category: undefined }));
+                    }}
                   >
                     <option value="" disabled>
                       Select category
                     </option>
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
+                    {PROBLEM_GROUPS.map((group) => (
+                      <option key={group.group} value={group.group}>
+                        {group.group}
                       </option>
                     ))}
                   </select>
+                </Field>
+
+                <Field label="Problem statement" error={errors.category}>
+                  <select
+                    className={errors.category ? "err" : ""}
+                    value={project.category}
+                    onChange={(e) => updateProject("category", e.target.value)}
+                    disabled={!selectedGroup}
+                  >
+                    <option value="" disabled>
+                      {selectedGroup ? "Select a problem statement" : "Select a category first"}
+                    </option>
+                    {(selectedGroup?.items || []).map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedProblem ? <div className="hackathon-ps-hint">{selectedProblem.hint}</div> : null}
                 </Field>
 
                 <Field label="Project title" error={errors.projectTitle}>

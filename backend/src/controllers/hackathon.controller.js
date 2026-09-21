@@ -1,5 +1,6 @@
 const path = require('path');
 const Hackathon = require('../models/hackathon.model');
+const HackathonQuery = require('../models/hackathonQuery.model');
 const asyncHandler = require('../middleware/asyncHandler');
 const apiResponse = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
@@ -8,14 +9,33 @@ const env = require('../config/env');
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^[0-9]{10}$/;
 const YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
-const CATEGORIES = [
-  'Healthcare',
-  'Education',
-  'Fintech',
-  'Sustainability & Climate',
-  'Agriculture',
-  'Open Innovation',
-];
+const PROBLEM_GROUPS = {
+  Agriculture: [
+    'Fair Price Discovery for Crops',
+    'Early Warning for Crop Damage',
+    'Simplified Access to Loans and Government Schemes',
+  ],
+  'Army / Defence': [
+    'Health Monitoring for Soldiers in Remote Areas',
+    'Emergency Communication in No-Network Zones',
+    'Community Reporting Near Border Areas',
+  ],
+  Startups: [
+    'Local Skilled Worker Marketplace',
+    'Waste-to-Earn Rewards Platform',
+    'Home-Cooked Meal Delivery Network',
+  ],
+  'Real-Life Problems': [
+    'Reducing Household Water Wastage',
+    'Daily Check-In System for Elderly Living Alone',
+    'Support System for Student Exam Stress',
+  ],
+  'Road & Vehicle Safety': [
+    'Automatic Accident Alert System',
+    'Helmet and Seatbelt Reminder System',
+    'Pothole and Accident Hotspot Reporting',
+  ],
+};
 
 function generateTeamId(teamName) {
   const prefix = String(teamName || 'XXX')
@@ -64,6 +84,7 @@ const createRegistration = asyncHandler(async (req, res) => {
     course,
     yearOfStudy,
     category,
+    problemStatement,
     projectTitle,
     problemDesc,
     solution,
@@ -77,7 +98,10 @@ const createRegistration = asyncHandler(async (req, res) => {
   if (!String(collegeName || '').trim()) throw new AppError('Please enter your college name.', 400);
   if (!String(course || '').trim()) throw new AppError('Please enter your course.', 400);
   if (!YEARS.includes(yearOfStudy)) throw new AppError('Please select a year.', 400);
-  if (!CATEGORIES.includes(category)) throw new AppError('Please select a category.', 400);
+  if (!PROBLEM_GROUPS[category]) throw new AppError('Please select a category.', 400);
+  if (!PROBLEM_GROUPS[category].includes(String(problemStatement || '').trim())) {
+    throw new AppError('Please select a problem statement.', 400);
+  }
   if (!String(projectTitle || '').trim()) throw new AppError('Please enter a project title.', 400);
   if (!String(problemDesc || '').trim()) throw new AppError('Please describe the problem.', 400);
   if (!String(solution || '').trim()) throw new AppError('Please describe your solution.', 400);
@@ -118,6 +142,7 @@ const createRegistration = asyncHandler(async (req, res) => {
     memberCount: members.length,
     members,
     category,
+    problemStatement: String(problemStatement).trim(),
     projectTitle: String(projectTitle).trim(),
     problemDesc: String(problemDesc).trim(),
     solution: String(solution).trim(),
@@ -147,4 +172,21 @@ const createRegistration = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { createRegistration };
+const createQuery = asyncHandler(async (req, res) => {
+  const name = String(req.body?.name || '').trim();
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const message = String(req.body?.message || '').trim();
+
+  if (!name) throw new AppError('Please enter your name.', 400);
+  if (!EMAIL_RE.test(email)) throw new AppError('Enter a valid email.', 400);
+  if (!message) throw new AppError('Please write your question.', 400);
+
+  await HackathonQuery.create({ name, email, message });
+
+  return apiResponse.success(res, {
+    status: 201,
+    message: 'Query submitted',
+  });
+});
+
+module.exports = { createRegistration, createQuery };

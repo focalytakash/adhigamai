@@ -26,6 +26,7 @@ const hackathonSchema = new mongoose.Schema(
       validate: [(v) => v.length >= 3 && v.length <= 5, 'Team must have 3 to 5 members'],
     },
     category: { type: String, required: true, trim: true },
+    problemStatement: { type: String, required: true, trim: true },
     projectTitle: { type: String, required: true, trim: true },
     problemDesc: { type: String, required: true, trim: true },
     solution: { type: String, required: true, trim: true },

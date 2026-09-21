@@ -240,6 +240,15 @@ const FrontHeader = () => {
                         About Us
                       </Link>
                     </li>
+                    <li className="nav-item">
+                      <Link
+                        className="nav-link-item drop-trigger"
+                        to="/hackathon"
+                        onClick={(e) => handleNavLinkClick(e, "/hackathon")}
+                      >
+                        Hackathon
+                      </Link>
+                    </li>
                     
                     <li className="nav-item">
                       <Link
