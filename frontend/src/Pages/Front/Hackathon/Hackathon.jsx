@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Minus, Plus, Upload } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, FileText, MessageCircle, Minus, Plus } from "lucide-react";
 import axios from "axios";
 import siteConfig from "../../../config/siteConfig";
 import { PROBLEM_GROUPS } from "./problemStatements";
@@ -12,13 +12,10 @@ const STEPS = [
   { n: 2, label: "Members" },
   { n: 3, label: "Project" },
 ];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RULEBOOK_PDF = siteConfig.hackathon?.rulebookPdf ;
+const WHATSAPP_GROUP = siteConfig.hackathon?.whatsappGroup || "";
 const MOBILE_RE = /^[0-9]{10}$/;
-const PPT_TYPES = [
-  "application/pdf",
-  "application/vnd.ms-powerpoint",
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function emptyMember() {
   return { name: "", mobile: "", email: "", roll: "" };
@@ -52,8 +49,6 @@ const Hackathon = () => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, []);
   const backendUrl = process.env.REACT_APP_ADHIGAM_BACKEND_URL;
-  const bucketUrl = process.env.REACT_APP_ADHIGAM_BUCKET_URL;
-  const fileRef = useRef(null);
 
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
@@ -61,7 +56,6 @@ const Hackathon = () => {
   const [submitError, setSubmitError] = useState("");
   const [teamId, setTeamId] = useState("");
   const [errors, setErrors] = useState({});
-  const [dragging, setDragging] = useState(false);
 
   const [team, setTeam] = useState({
     teamName: "",
@@ -75,12 +69,8 @@ const Hackathon = () => {
   const [project, setProject] = useState({
     problemGroup: "",
     category: "",
-    projectTitle: "",
     problemDesc: "",
-    solution: "",
-    techUsed: "",
   });
-  const [pptFile, setPptFile] = useState(null);
   const [decl1, setDecl1] = useState(false);
   const [decl2, setDecl2] = useState(false);
 
@@ -114,18 +104,6 @@ const Hackathon = () => {
     setMembers((prev) => makeMembers(count, prev));
   };
 
-  const setPpt = (file) => {
-    if (!file) return;
-    const ext = file.name.split(".").pop()?.toLowerCase();
-    const okType = PPT_TYPES.includes(file.type) || ["ppt", "pptx", "pdf"].includes(ext);
-    if (!okType) {
-      setErrors((prev) => ({ ...prev, ppt: "Please upload a .ppt, .pptx, or .pdf file." }));
-      return;
-    }
-    setPptFile(file);
-    setErrors((prev) => ({ ...prev, ppt: undefined }));
-  };
-
   const validateStep = (n) => {
     const next = {};
 
@@ -142,18 +120,13 @@ const Hackathon = () => {
         if (!member.name.trim()) next[`member-${i}-name`] = "Please enter full name.";
         if (!MOBILE_RE.test(member.mobile.trim())) next[`member-${i}-mobile`] = "Enter a valid mobile number.";
         if (!EMAIL_RE.test(member.email.trim())) next[`member-${i}-email`] = "Enter a valid email.";
-        if (!member.roll.trim()) next[`member-${i}-roll`] = "Please enter roll number.";
+        if (!/^[0-9]+$/.test(member.roll.trim())) next[`member-${i}-roll`] = "Enter a numeric roll number.";
       });
     }
 
     if (n === 3) {
       if (!project.problemGroup) next.problemGroup = "Please select a category.";
       if (!project.category) next.category = "Please select a problem statement.";
-      if (!project.projectTitle.trim()) next.projectTitle = "Please enter a project title.";
-      if (!project.problemDesc.trim()) next.problemDesc = "Please describe the problem.";
-      if (!project.solution.trim()) next.solution = "Please describe your solution.";
-      if (!project.techUsed.trim()) next.techUsed = "Please list the technologies you're using.";
-      if (!pptFile) next.ppt = "Please upload your PPT.";
       if (!decl1) next.decl1 = true;
       if (!decl2) next.decl2 = true;
     }
@@ -182,38 +155,28 @@ const Hackathon = () => {
     setSubmitting(true);
     setSubmitError("");
 
-    const formData = new FormData();
-    formData.append("teamName", team.teamName.trim());
-    formData.append("leaderName", team.leaderName.trim());
-    formData.append("collegeName", team.collegeName.trim());
-    formData.append("course", team.course.trim());
-    formData.append("yearOfStudy", team.yearOfStudy);
-    formData.append("category", project.problemGroup);
-    formData.append("problemStatement", selectedProblem?.label || "");
-    formData.append("projectTitle", project.projectTitle.trim());
-    formData.append("problemDesc", project.problemDesc.trim());
-    formData.append("solution", project.solution.trim());
-    formData.append("techUsed", project.techUsed.trim());
-    formData.append("decl1", String(decl1));
-    formData.append("decl2", String(decl2));
-    formData.append(
-      "members",
-      JSON.stringify(
-        members.map((member) => ({
-          name: member.name.trim(),
-          mobile: member.mobile.trim(),
-          email: member.email.trim(),
-          roll: member.roll.trim(),
-        }))
-      )
-    );
-    formData.append("ppt", pptFile);
-    if (bucketUrl) formData.append("bucketUrl", bucketUrl);
+    const payload = {
+      teamName: team.teamName.trim(),
+      leaderName: team.leaderName.trim(),
+      collegeName: team.collegeName.trim(),
+      course: team.course.trim(),
+      yearOfStudy: team.yearOfStudy,
+      category: project.problemGroup,
+      problemStatement: selectedProblem?.label || "",
+      problemCode: selectedProblem?.code || "",
+      problemDesc: project.problemDesc.trim(),
+      decl1: String(decl1),
+      decl2: String(decl2),
+      members: members.map((member) => ({
+        name: member.name.trim(),
+        mobile: member.mobile.trim(),
+        email: member.email.trim(),
+        roll: member.roll.trim(),
+      })),
+    };
 
     try {
-      const response = await axios.post(`${backendUrl}/api/v1/hackathon`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(`${backendUrl}/api/v1/hackathon`, payload);
       const savedId = response.data?.data?.teamId;
       if (response.status === 200 || response.status === 201) {
         setTeamId(savedId || generateTeamId(team.teamName));
@@ -251,6 +214,18 @@ const Hackathon = () => {
             <div className="hackathon-sub">
               Three quick steps: team details, each member&apos;s info, and your project pitch. Takes about five minutes.
             </div>
+            <div className="hackathon-header-links">
+              <a className="hackathon-guide-link" href={RULEBOOK_PDF} target="_blank" rel="noreferrer">
+                <FileText size={16} />
+                Hackathon guidelines
+              </a>
+              {WHATSAPP_GROUP ? (
+                <a className="hackathon-guide-link is-whatsapp" href={WHATSAPP_GROUP} target="_blank" rel="noreferrer">
+                  <MessageCircle size={16} />
+                  Join WhatsApp group
+                </a>
+              ) : null}
+            </div>
           </div>
 
           {!submitted ? (
@@ -281,6 +256,12 @@ const Hackathon = () => {
                   leader&apos;s email shortly.
                 </p>
                 <div className="hackathon-team-id">{teamId}</div>
+                {WHATSAPP_GROUP ? (
+                  <a className="hackathon-guide-link is-whatsapp" href={WHATSAPP_GROUP} target="_blank" rel="noreferrer">
+                    <MessageCircle size={16} />
+                    Join WhatsApp group
+                  </a>
+                ) : null}
               </div>
             ) : null}
 
@@ -395,10 +376,17 @@ const Hackathon = () => {
                     <div className="hackathon-grid2">
                       <Field label="Mobile number" error={errors[`member-${i}-mobile`]}>
                         <input
-                          type="tel"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="tel"
+                          maxLength={10}
+                          pattern="[0-9]{10}"
                           className={errors[`member-${i}-mobile`] ? "err" : ""}
                           value={member.mobile}
-                          onChange={(e) => updateMember(i, "mobile", e.target.value)}
+                          onBeforeInput={(e) => {
+                            if (member.mobile.length >= 10 && /\d/.test(e.data || "")) e.preventDefault();
+                          }}
+                          onChange={(e) => updateMember(i, "mobile", e.target.value.replace(/\D/g, "").slice(0, 10))}
                           placeholder="10-digit number"
                         />
                       </Field>
@@ -415,9 +403,10 @@ const Hackathon = () => {
                     <Field label="College roll number" error={errors[`member-${i}-roll`]}>
                       <input
                         type="text"
+                        inputMode="numeric"
                         className={errors[`member-${i}-roll`] ? "err" : ""}
                         value={member.roll}
-                        onChange={(e) => updateMember(i, "roll", e.target.value)}
+                        onChange={(e) => updateMember(i, "roll", e.target.value.replace(/\D/g, ""))}
                         placeholder="Roll no."
                       />
                     </Field>
@@ -447,8 +436,13 @@ const Hackathon = () => {
                     value={project.problemGroup}
                     onChange={(e) => {
                       const group = e.target.value;
-                      setProject((prev) => ({ ...prev, problemGroup: group, category: "" }));
-                      setErrors((prev) => ({ ...prev, problemGroup: undefined, category: undefined }));
+                      setProject((prev) => ({ ...prev, problemGroup: group, category: "", problemDesc: "" }));
+                      setErrors((prev) => ({
+                        ...prev,
+                        problemGroup: undefined,
+                        category: undefined,
+                        problemDesc: undefined,
+                      }));
                     }}
                   >
                     <option value="" disabled>
@@ -466,7 +460,16 @@ const Hackathon = () => {
                   <select
                     className={errors.category ? "err" : ""}
                     value={project.category}
-                    onChange={(e) => updateProject("category", e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const item = selectedGroup?.items.find((ps) => ps.value === value);
+                      setProject((prev) => ({
+                        ...prev,
+                        category: value,
+                        problemDesc: item?.description || "",
+                      }));
+                      setErrors((prev) => ({ ...prev, category: undefined, problemDesc: undefined }));
+                    }}
                     disabled={!selectedGroup}
                   >
                     <option value="" disabled>
@@ -478,90 +481,17 @@ const Hackathon = () => {
                       </option>
                     ))}
                   </select>
-                  {selectedProblem ? <div className="hackathon-ps-hint">{selectedProblem.hint}</div> : null}
                 </Field>
 
-                <Field label="Project title" error={errors.projectTitle}>
-                  <input
-                    type="text"
-                    className={errors.projectTitle ? "err" : ""}
-                    value={project.projectTitle}
-                    onChange={(e) => updateProject("projectTitle", e.target.value)}
-                    placeholder="Name your project"
-                  />
-                </Field>
-
-                <Field label="Problem description" error={errors.problemDesc}>
-                  <textarea
-                    className={errors.problemDesc ? "err" : ""}
-                    value={project.problemDesc}
-                    onChange={(e) => updateProject("problemDesc", e.target.value)}
-                    placeholder="What problem are you solving?"
-                  />
-                </Field>
-
-                <Field label="Proposed solution" error={errors.solution}>
-                  <textarea
-                    className={errors.solution ? "err" : ""}
-                    value={project.solution}
-                    onChange={(e) => updateProject("solution", e.target.value)}
-                    placeholder="How does your project solve it?"
-                  />
-                </Field>
-
-                <Field label="Technology used" error={errors.techUsed}>
-                  <input
-                    type="text"
-                    className={errors.techUsed ? "err" : ""}
-                    value={project.techUsed}
-                    onChange={(e) => updateProject("techUsed", e.target.value)}
-                    placeholder="e.g. Python, React, TensorFlow"
-                  />
-                </Field>
-
-                <div className="hackathon-field">
-                  <span className="hackathon-label">
-                    PPT upload <span className="req">*</span>
-                  </span>
-                  <div
-                    className={`hackathon-file-drop${pptFile ? " has-file" : ""}${dragging ? " is-drag" : ""}${errors.ppt ? " is-invalid" : ""}`}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => fileRef.current?.click()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        fileRef.current?.click();
-                      }
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragging(true);
-                    }}
-                    onDragLeave={() => setDragging(false)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragging(false);
-                      setPpt(e.dataTransfer.files?.[0]);
-                    }}
-                  >
-                    <div className="hackathon-file-icon">
-                      <Upload size={22} />
+                {selectedProblem ? (
+                  <div className="hackathon-field">
+                    <span className="hackathon-label">Problem description</span>
+                    <div className="hackathon-desc-box">
+                      <strong>{selectedProblem.label}</strong>
+                      <p>{selectedProblem.description}</p>
                     </div>
-                    <div className="hackathon-file-text">
-                      <strong>Click to upload</strong> your presentation (.ppt, .pptx, .pdf)
-                    </div>
-                    {pptFile ? <div className="hackathon-file-name">{pptFile.name}</div> : null}
                   </div>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".ppt,.pptx,.pdf"
-                    hidden
-                    onChange={(e) => setPpt(e.target.files?.[0])}
-                  />
-                  {errors.ppt ? <div className="hackathon-err">{errors.ppt}</div> : null}
-                </div>
+                ) : null}
 
                 <div className="hackathon-decl-heading">Declaration</div>
                 <label className={`hackathon-decl${decl1 ? " is-checked" : ""}${errors.decl1 && !decl1 ? " is-invalid" : ""}`}>

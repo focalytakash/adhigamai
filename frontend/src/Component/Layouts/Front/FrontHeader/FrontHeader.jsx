@@ -243,8 +243,8 @@ const FrontHeader = () => {
                     <li className="nav-item">
                       <Link
                         className="nav-link-item drop-trigger"
-                        to="/hackathon"
-                        onClick={(e) => handleNavLinkClick(e, "/hackathon")}
+                        to="/hackathon/register"
+                        onClick={(e) => handleNavLinkClick(e, "/hackathon/register")}
                       >
                         Hackathon
                       </Link>

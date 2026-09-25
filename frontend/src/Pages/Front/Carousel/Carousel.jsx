@@ -201,6 +201,7 @@ const css = `
 .gx .details > .cta {
   width: 100%;
   margin-top: 24px;
+  margin-bottom: 88px;
   display: flex;
   align-items: center;
   padding: 10px 12px;
@@ -237,16 +238,50 @@ const css = `
   cursor: pointer;
 }
 
-.gx .indicator { position: absolute; left: 0; right: 0; top: 0; height: 4px; z-index: 60; background: linear-gradient(90deg, var(--gx-blue-light), var(--gx-blue-glow)); }
+.gx .indicator { display: none; }
 
-.gx .pagination { position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; }
-.gx .pagination > .arrow { z-index: 60; width: 50px; height: 50px; border-radius: 999px; border: 1.5px solid rgba(63, 169, 245, 0.45); display: grid; place-items: center; color: var(--gx-blue-light); cursor: pointer; background: rgba(5, 8, 28, 0.45); }
-.gx .pagination > .arrow:nth-child(2) { margin-left: 20px; }
-.gx .pagination .progress-sub-container { margin-left: 24px; z-index: 60; width: min(420px, 36vw); height: 50px; display: flex; align-items: center; }
-.gx .pagination .progress-sub-background { width: 100%; height: 3px; background-color: rgba(255,255,255,0.2); }
-.gx .pagination .progress-sub-foreground { height: 3px; background: linear-gradient(90deg, var(--gx-blue-deep), var(--gx-blue-glow)); }
-.gx .pagination .slide-numbers { width: 50px; height: 50px; overflow: hidden; z-index: 60; position: relative; }
-.gx .pagination .slide-numbers .item { width: 50px; height: 50px; position: absolute; color: var(--gx-text); top: 0; left: 0; display: grid; place-items: center; font-size: 28px; font-weight: 800; font-family: var(--gx-font-display); text-shadow: 0 2px 8px rgba(5,8,28,0.6); }
+.gx .pagination {
+  position: absolute;
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: max-content;
+  z-index: 90;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(5, 8, 28, 0.88);
+  border: 1px solid rgba(63, 169, 245, 0.55);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+}
+.gx .pagination > .arrow {
+  z-index: 90;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid rgba(63, 169, 245, 0.95);
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  cursor: pointer;
+  background: rgba(37, 99, 235, 0.85);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.gx .pagination > .arrow:hover,
+.gx .pagination > .arrow:focus-visible {
+  background: #1ba7ff;
+  border-color: #ffffff;
+}
+.gx .pagination .progress-sub-container { display: none; }
+.gx .pagination .slide-numbers { width: 48px; height: 48px; overflow: hidden; z-index: 60; position: relative; }
+.gx .pagination .slide-numbers .item { width: 48px; height: 48px; position: absolute; color: var(--gx-text); top: 0; left: 0; display: grid; place-items: center; font-size: 24px; font-weight: 800; font-family: var(--gx-font-display); text-shadow: 0 2px 8px rgba(5,8,28,0.6); }
 
 .gx .cover { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-color: var(--gx-navy); z-index: 100; pointer-events: none; }
 
@@ -254,22 +289,33 @@ const css = `
   .gx { height: min(100vh, 760px); min-height: 520px; }
   .gx .details { top: 18%; left: 24px; max-width: min(420px, 88vw); }
   .gx .details .title-box-1, .gx .details .title-box-2 { height: 56px; }
-  .gx .pagination .progress-sub-container { width: min(240px, 40vw); }
 }
 
 @media (max-width: 640px) {
-  .gx { height: 100svh; min-height: 480px; }
-  .gx .details { top: 14%; left: 18px; max-width: calc(100% - 36px); padding: 8px 0 0; }
-  .gx .details .title-1, .gx .details .title-2 { font-size: 28px; }
-  .gx .details .title-box-1, .gx .details .title-box-2 { height: 42px; }
+  .gx { height: 560px; min-height: 520px; max-height: 70svh; }
+  .gx .details { top: 12%; left: 16px; max-width: calc(100% - 32px); padding: 8px 0 0; }
+  .gx .details .title-1, .gx .details .title-2 { font-size: 24px; }
+  .gx .details .title-box-1, .gx .details .title-box-2 { height: 36px; }
   .gx .details > .desc {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .gx .pagination > .arrow { width: 40px; height: 40px; }
-  .gx .pagination .progress-sub-container { display: none; }
+  .gx .details > .cta { display: none; }
+  .gx .card-content { display: none; }
+  .gx .pagination {
+    left: 50%;
+    right: auto;
+    bottom: 16px;
+    transform: translateX(-50%);
+    justify-content: center;
+  }
+  .gx .pagination > .arrow {
+    width: 48px;
+    height: 48px;
+    background: #2563eb;
+  }
 }
 `;
 
@@ -302,30 +348,64 @@ function Carousel() {
     let stageH = root.clientHeight;
     let cardWidth = 200;
     let cardHeight = 300;
-    const gap = 40;
+    let gap = 40;
     const numberSize = 50;
     const ease = "sine.inOut";
     let stopped = false;
+    let busy = false;
 
     const getSize = () => {
       stageW = root.clientWidth || window.innerWidth;
       stageH = root.clientHeight || window.innerHeight;
       const compact = stageW < 980;
-      cardWidth = compact ? Math.min(160, stageW * 0.28) : 200;
-      cardHeight = compact ? Math.min(240, stageH * 0.38) : 300;
-      offsetTop = Math.max(120, stageH - cardHeight - (compact ? 110 : 130));
-      offsetLeft = Math.max(24, stageW - (compact ? 520 : 830));
+      const mobile = stageW < 640;
+      if (mobile) {
+        gap = 10;
+        cardWidth = 84;
+        cardHeight = 118;
+        offsetTop = stageH - cardHeight - 72;
+        offsetLeft = Math.max(12, stageW - 2 * (cardWidth + gap) - 12);
+      } else if (compact) {
+        gap = 24;
+        cardWidth = Math.min(160, stageW * 0.28);
+        cardHeight = Math.min(240, stageH * 0.38);
+        offsetTop = Math.max(120, stageH - cardHeight - 110);
+        offsetLeft = Math.max(24, stageW - 520);
+      } else {
+        gap = 40;
+        cardWidth = 200;
+        cardHeight = 300;
+        offsetTop = Math.max(120, stageH - cardHeight - 130);
+        offsetLeft = Math.max(24, stageW - 830);
+      }
     };
+
+    const isMobile = () => (root.clientWidth || window.innerWidth) < 640;
 
     const getCard = (i) => cards[i];
     const getCardContent = (i) => cardContents[i];
     const getSliderItem = (i) => sliderItems[i];
 
-    function animate(target, duration, properties) {
-      return new Promise((resolve) => {
-        gsap.to(target, { ...properties, duration, onComplete: resolve });
+    const hidePreviewCard = (i) => {
+      gsap.set(getCard(i), {
+        x: stageW + 80,
+        y: offsetTop,
+        width: cardWidth,
+        height: cardHeight,
+        opacity: 0,
+        zIndex: 1,
+        borderRadius: 10,
+        scale: 1,
       });
-    }
+      gsap.set(getCardContent(i), {
+        x: stageW + 80,
+        y: offsetTop,
+        width: cardWidth,
+        height: 110,
+        opacity: 0,
+        zIndex: 1,
+      });
+    };
 
     function init() {
       getSize();
@@ -334,17 +414,11 @@ function Carousel() {
       const detailsInactive = detailsEven ? detailsOddRef.current : detailsEvenRef.current;
       const progressW = Math.min(420, stageW * 0.36);
 
-      gsap.set(paginationRef.current, {
-        top: offsetTop + cardHeight + 30,
-        left: offsetLeft,
-        y: 200,
-        opacity: 0,
-        zIndex: 60,
-      });
+      gsap.set(paginationRef.current, { opacity: 1, zIndex: 90 });
 
-      gsap.set(getCard(active), { x: 0, y: 0, width: stageW, height: stageH, borderRadius: 0 });
+      gsap.set(getCard(active), { x: 0, y: 0, width: stageW, height: stageH, borderRadius: 0, opacity: 1 });
       gsap.set(getCardContent(active), { x: 0, y: 0, opacity: 0 });
-      gsap.set(detailsActive, { opacity: 0, zIndex: 22, x: -200 });
+      gsap.set(detailsActive, { opacity: 1, zIndex: 22, x: 0 });
       gsap.set(detailsInactive, { opacity: 0, zIndex: 12 });
       gsap.set(detailsInactive.querySelector(".text"), { y: 100 });
       gsap.set(detailsInactive.querySelector(".title-1"), { y: 100 });
@@ -355,6 +429,11 @@ function Carousel() {
       gsap.set(progressFgRef.current, { width: progressW * (1 / order.length) * (active + 1) });
 
       rest.forEach((i, index) => {
+        if (isMobile()) {
+          hidePreviewCard(i);
+          gsap.set(getSliderItem(i), { x: (index + 1) * numberSize });
+          return;
+        }
         gsap.set(getCard(i), {
           x: offsetLeft + 400 + index * (cardWidth + gap),
           y: offsetTop,
@@ -374,22 +453,11 @@ function Carousel() {
       });
 
       gsap.set(indicatorRef.current, { x: -stageW });
-
-      const startDelay = 0.6;
-
-      gsap.to(coverRef.current, {
-        x: stageW + 400,
-        delay: 0.5,
-        ease,
-        onComplete: () => {
-          setTimeout(() => {
-            loop();
-          }, 500);
-        },
-      });
+      gsap.set(coverRef.current, { x: stageW + 400, opacity: 0 });
 
       rest.forEach((i, index) => {
-        gsap.to(getCard(i), { x: offsetLeft + index * (cardWidth + gap), zIndex: 30, ease, delay: startDelay });
+        if (isMobile()) return;
+        gsap.to(getCard(i), { x: offsetLeft + index * (cardWidth + gap), zIndex: 30, ease, delay: 0.2 });
         gsap.to(getCardContent(i), {
           x: offsetLeft + index * (cardWidth + gap),
           y: offsetTop + cardHeight - 110,
@@ -397,17 +465,16 @@ function Carousel() {
           height: 110,
           zIndex: 40,
           ease,
-          delay: startDelay,
+          delay: 0.2,
         });
       });
-      gsap.to(paginationRef.current, { y: 0, opacity: 1, ease, delay: startDelay });
-      gsap.to(detailsActive, { opacity: 1, x: 0, ease, delay: startDelay });
     }
 
-    function step() {
+    function step(dir = 1) {
       return new Promise((resolve) => {
         getSize();
-        order.push(order.shift());
+        if (dir === 1) order.push(order.shift());
+        else order.unshift(order.pop());
         detailsEven = !detailsEven;
 
         const detailsActive = detailsEven ? detailsEvenRef.current : detailsOddRef.current;
@@ -429,48 +496,51 @@ function Carousel() {
         gsap.set(detailsInactive, { zIndex: 12 });
 
         const [active, ...rest] = order;
-        const prv = rest[rest.length - 1];
+        const prv = dir === 1 ? rest[rest.length - 1] : rest[0];
 
         gsap.set(getCard(prv), { zIndex: 10 });
         gsap.set(getCard(active), { zIndex: 20 });
-        gsap.to(getCard(prv), { scale: 1.5, ease });
+        if (!isMobile()) {
+          gsap.to(getCard(prv), { scale: 1.5, ease });
+        }
 
         gsap.to(getCardContent(active), { y: offsetTop + cardHeight - 10, opacity: 0, duration: 0.3, ease });
         gsap.to(getSliderItem(active), { x: 0, ease });
         gsap.to(getSliderItem(prv), { x: -numberSize, ease });
         gsap.to(progressFgRef.current, { width: progressW * (1 / order.length) * (active + 1), ease });
 
-        gsap.set(paginationRef.current, {
-          top: offsetTop + cardHeight + 30,
-          left: offsetLeft,
-        });
-
         gsap.to(getCard(active), {
           x: 0,
           y: 0,
           ease,
+          opacity: 1,
           width: stageW,
           height: stageH,
           borderRadius: 0,
           onComplete: () => {
-            const xNew = offsetLeft + (rest.length - 1) * (cardWidth + gap);
-            gsap.set(getCard(prv), {
-              x: xNew,
-              y: offsetTop,
-              width: cardWidth,
-              height: cardHeight,
-              zIndex: 30,
-              borderRadius: 10,
-              scale: 1,
-            });
-            gsap.set(getCardContent(prv), {
-              x: xNew,
-              y: offsetTop + cardHeight - 110,
-              width: cardWidth,
-              height: 110,
-              opacity: 1,
-              zIndex: 40,
-            });
+            if (isMobile()) {
+              hidePreviewCard(prv);
+            } else {
+              const prvIndex = dir === 1 ? rest.length - 1 : 0;
+              const xNew = offsetLeft + prvIndex * (cardWidth + gap);
+              gsap.set(getCard(prv), {
+                x: xNew,
+                y: offsetTop,
+                width: cardWidth,
+                height: cardHeight,
+                zIndex: 30,
+                borderRadius: 10,
+                scale: 1,
+              });
+              gsap.set(getCardContent(prv), {
+                x: xNew,
+                y: offsetTop + cardHeight - 110,
+                width: cardWidth,
+                height: 110,
+                opacity: 1,
+                zIndex: 40,
+              });
+            }
             gsap.set(getSliderItem(prv), { x: rest.length * numberSize });
 
             gsap.set(detailsInactive, { opacity: 0 });
@@ -483,43 +553,59 @@ function Carousel() {
         });
 
         rest.forEach((i, index) => {
-          if (i !== prv) {
-            const xNew = offsetLeft + index * (cardWidth + gap);
-            gsap.set(getCard(i), { zIndex: 30 });
-            gsap.to(getCard(i), {
-              x: xNew,
-              y: offsetTop,
-              width: cardWidth,
-              height: cardHeight,
-              ease,
-              delay: 0.1 * (index + 1),
-            });
-            gsap.to(getCardContent(i), {
-              x: xNew,
-              y: offsetTop + cardHeight - 110,
-              width: cardWidth,
-              height: 110,
-              opacity: 1,
-              zIndex: 40,
-              ease,
-              delay: 0.1 * (index + 1),
-            });
-            gsap.to(getSliderItem(i), { x: (index + 1) * numberSize, ease });
+          if (i === prv) return;
+          gsap.to(getSliderItem(i), { x: (index + 1) * numberSize, ease });
+          if (isMobile()) {
+            hidePreviewCard(i);
+            return;
           }
+          const xNew = offsetLeft + index * (cardWidth + gap);
+          gsap.set(getCard(i), { zIndex: 30 });
+          gsap.to(getCard(i), {
+            x: xNew,
+            y: offsetTop,
+            width: cardWidth,
+            height: cardHeight,
+            ease,
+            delay: 0.1 * (index + 1),
+          });
+          gsap.to(getCardContent(i), {
+            x: xNew,
+            y: offsetTop + cardHeight - 110,
+            width: cardWidth,
+            height: 110,
+            opacity: 1,
+            zIndex: 40,
+            ease,
+            delay: 0.1 * (index + 1),
+          });
         });
       });
     }
 
-    async function loop() {
-      if (stopped) return;
-      await animate(indicatorRef.current, 2, { x: 0 });
-      if (stopped) return;
-      await animate(indicatorRef.current, 0.8, { x: stageW, delay: 0.3 });
-      if (stopped) return;
-      gsap.set(indicatorRef.current, { x: -stageW });
-      await step();
-      if (!stopped) loop();
+    function go(dir) {
+      if (busy || stopped) return;
+      busy = true;
+      step(dir).finally(() => {
+        busy = false;
+      });
     }
+
+    const onPrev = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      go(-1);
+    };
+    const onNext = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      go(1);
+    };
+
+    const leftBtn = paginationRef.current?.querySelector(".arrow-left");
+    const rightBtn = paginationRef.current?.querySelector(".arrow-right");
+    leftBtn?.addEventListener("click", onPrev);
+    rightBtn?.addEventListener("click", onNext);
 
     function loadImage(src) {
       return new Promise((resolve, reject) => {
@@ -544,6 +630,8 @@ function Carousel() {
 
     return () => {
       stopped = true;
+      leftBtn?.removeEventListener("click", onPrev);
+      rightBtn?.removeEventListener("click", onNext);
       gsap.killTweensOf(cards);
       gsap.killTweensOf(cardContents);
       gsap.killTweensOf(sliderItems);
@@ -610,14 +698,6 @@ function Carousel() {
         <button type="button" className="arrow arrow-left" aria-label="Previous">
           <ChevronLeft size={24} />
         </button>
-        <button type="button" className="arrow arrow-right" aria-label="Next">
-          <ChevronRight size={24} />
-        </button>
-        <div className="progress-sub-container">
-          <div className="progress-sub-background">
-            <div className="progress-sub-foreground" ref={progressFgRef} />
-          </div>
-        </div>
         <div className="slide-numbers">
           {data.map((_, i) => (
             <div key={`num-${i}`} className="item" ref={(el) => (sliderItemRefs.current[i] = el)}>
@@ -625,6 +705,10 @@ function Carousel() {
             </div>
           ))}
         </div>
+        <button type="button" className="arrow arrow-right" aria-label="Next">
+          <ChevronRight size={24} />
+        </button>
+        <div className="progress-sub-foreground" ref={progressFgRef} hidden />
       </div>
 
       <div className="cover" ref={coverRef} />

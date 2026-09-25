@@ -12,6 +12,11 @@ const siteConfig = {
     mobileLogoWidth: "120px",
   },
 
+  hackathon: {
+    rulebookPdf: "/Assets/pdf/Hackathon_Rulebook.pdf",
+    whatsappGroup: "https://chat.whatsapp.com/GOWC2QXYv9gE5v2eNCfgou",
+  },
+
   typography: {
     fontUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@600;700;900&display=swap",
     bodyFont: '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif',

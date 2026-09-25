@@ -27,16 +27,8 @@ const hackathonSchema = new mongoose.Schema(
     },
     category: { type: String, required: true, trim: true },
     problemStatement: { type: String, required: true, trim: true },
-    projectTitle: { type: String, required: true, trim: true },
+    problemCode: { type: String, trim: true, default: '' },
     problemDesc: { type: String, required: true, trim: true },
-    solution: { type: String, required: true, trim: true },
-    techUsed: { type: String, required: true, trim: true },
-    ppt: {
-      key: { type: String, required: true },
-      originalName: { type: String, required: true },
-      mimeType: { type: String, default: '' },
-      size: { type: Number, default: 0 },
-    },
     declarations: {
       infoCorrect: { type: Boolean, required: true },
       participateAllRounds: { type: Boolean, required: true },

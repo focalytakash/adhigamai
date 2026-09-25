@@ -94,6 +94,72 @@
   max-width: 48ch;
 }
 
+.hackathon-header-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.hackathon-guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(63, 169, 245, 0.7);
+  background: rgba(37, 99, 235, 0.28);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hackathon-guide-link:hover {
+  background: rgba(27, 167, 255, 0.4);
+  border-color: #fff;
+  color: #fff;
+}
+
+.hackathon-guide-link.is-light {
+  border-color: rgba(27, 167, 255, 0.45);
+  background: rgba(27, 167, 255, 0.1);
+  color: #0b6fad;
+}
+
+.hackathon-guide-link.is-light:hover {
+  background: rgba(27, 167, 255, 0.18);
+  border-color: var(--foc-color-primary, #1ba7ff);
+  color: #0b6fad;
+}
+
+.hackathon-guide-link.is-whatsapp {
+  border-color: rgba(37, 211, 102, 0.75);
+  background: rgba(37, 211, 102, 0.28);
+}
+
+.hackathon-guide-link.is-whatsapp:hover {
+  background: rgba(37, 211, 102, 0.42);
+  border-color: #fff;
+}
+
+.hackathon-guide-link.is-light.is-whatsapp {
+  border-color: rgba(18, 140, 70, 0.45);
+  background: rgba(37, 211, 102, 0.14);
+  color: #0b7a38;
+}
+
+.hackathon-guide-link.is-light.is-whatsapp:hover {
+  background: rgba(37, 211, 102, 0.22);
+  border-color: #12a150;
+  color: #0b7a38;
+}
+
+.hackathon-success .hackathon-guide-link {
+  margin-top: 18px;
+}
+
 .hackathon-rail {
   display: flex;
   gap: 8px;
@@ -252,6 +318,36 @@
   font-size: 13px;
   line-height: 1.5;
   margin-top: 8px;
+}
+
+.hackathon-desc-box {
+  margin-top: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 13.5px;
+  line-height: 1.55;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.hackathon-desc-box strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hackathon-desc-box p {
+  margin: 0;
+}
+
+.hackathon-page .hackathon-desc-box,
+.hackathon-page .hackathon-desc-box strong,
+.hackathon-page .hackathon-desc-box p {
+  color: #fff;
 }
 
 .hackathon-field textarea {
@@ -808,5 +904,415 @@
 
   .hack-home-actions .btn {
     width: 100%;
+  }
+}
+
+.hack-teams-wrap {
+  max-width: min(1180px, 100%);
+}
+
+.hack-teams-status {
+  margin: 0 0 22px;
+  color: var(--text-dim);
+  font-size: 15px;
+}
+
+.hack-teams-status.is-error {
+  color: #ff8fa3;
+  font-weight: 600;
+}
+.hack-teams-status.is-error {
+  color: var(--foc-color-error, #ef4444);
+  font-weight: 600;
+}
+
+.hack-reg-scroll {
+  overflow-x: auto;
+  container-type: inline-size;
+  border: 1px solid var(--foc-color-border, rgba(4, 25, 45, 0.12));
+  border-radius: 16px;
+  background: var(--foc-color-surface, #fff);
+  box-shadow: 0 16px 40px rgba(6, 20, 38, 0.06);
+}
+
+.hack-reg-table {
+  width: 100%;
+  min-width: 860px;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.hack-reg-table thead th:nth-child(1),
+.hack-reg-team td:nth-child(1) {
+  width: 168px;
+}
+
+.hack-reg-table thead th:nth-child(2),
+.hack-reg-team td:nth-child(2) {
+  width: 16%;
+}
+
+.hack-reg-table thead th:nth-child(3),
+.hack-reg-team td:nth-child(3) {
+  width: 28%;
+}
+
+.hack-reg-table thead th:nth-child(4),
+.hack-reg-team td:nth-child(4) {
+  width: 30%;
+}
+
+.hack-reg-table thead th:nth-child(5),
+.hack-reg-team td:nth-child(5) {
+  width: 132px;
+}
+
+.hack-reg-table th,
+.hack-reg-table td {
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+  color: var(--foc-color-text, #061426);
+}
+
+.hack-reg-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--foc-color-surface-2, #f1f7ff);
+  color: var(--foc-color-text-muted, #3e5876);
+  font-family: var(--foc-font-sans, "Inter", system-ui, sans-serif);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--foc-color-border, rgba(4, 25, 45, 0.12));
+}
+
+.hack-reg-team td {
+  border-top: 1px solid var(--foc-color-border, rgba(4, 25, 45, 0.12));
+  background: #fff;
+}
+
+.hack-reg-table tbody tr:first-child td {
+  border-top: 0;
+}
+
+.hack-reg-team:hover td {
+  background: #f8fbff;
+}
+
+.hack-reg-id,
+.hack-reg-nowrap {
+  white-space: nowrap;
+}
+
+.hack-reg-id {
+  font-family: var(--foc-font-mono, ui-monospace, "Cascadia Code", monospace);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foc-color-primary, #1ba7ff);
+}
+
+.hack-reg-team-name {
+  font-weight: 700;
+  color: var(--foc-color-text-strong, #111827);
+  overflow-wrap: anywhere;
+}
+
+.hack-reg-college {
+  overflow-wrap: anywhere;
+  color: var(--foc-color-text-muted, #3e5876);
+  line-height: 1.45;
+}
+
+.hack-reg-category {
+  min-width: 0;
+}
+
+.hack-reg-cat {
+  font-weight: 700;
+  color: var(--foc-color-text-strong, #111827);
+}
+
+.hack-reg-sub {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--foc-color-text-subtle, #64748b);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.hack-reg-actions {
+  text-align: right;
+}
+
+.hack-reg-problem {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--foc-color-border, rgba(4, 25, 45, 0.12));
+}
+
+.hack-reg-problem-title {
+  margin: 0 0 6px;
+  color: var(--foc-color-text-muted, #3e5876);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hack-reg-problem p {
+  margin: 0;
+  color: var(--foc-color-text-muted, #3e5876);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.hack-reg-file {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--foc-color-primary, #1ba7ff);
+  font-family: var(--foc-font-sans, "Inter", system-ui, sans-serif);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hack-reg-file:hover {
+  text-decoration: underline;
+}
+
+.hack-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(6, 20, 38, 0.55);
+}
+
+.hack-preview-card {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  height: min(86vh, 820px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(6, 20, 38, 0.28);
+}
+
+.hack-preview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--foc-color-border, rgba(4, 25, 45, 0.12));
+}
+
+.hack-preview-head h2 {
+  margin: 0;
+  font-family: var(--foc-font-sans, "Inter", system-ui, sans-serif);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--foc-color-text-strong, #111827);
+}
+
+.hack-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hack-preview-actions a,
+.hack-preview-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--foc-color-border, rgba(4, 25, 45, 0.12));
+  border-radius: 999px;
+  background: #fff;
+  color: var(--foc-color-text, #061426);
+  font-family: var(--foc-font-sans, "Inter", system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.hack-preview-pages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  background: #eef3f8;
+}
+
+.hack-preview-pages p {
+  margin: 28px 0;
+  text-align: center;
+  color: var(--foc-color-text-muted, #3e5876);
+}
+
+.hack-preview-pages canvas {
+  display: block;
+  width: min(100%, 760px);
+  height: auto;
+  margin: 0 auto 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(6, 20, 38, 0.12);
+}
+
+.hack-preview-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #eef3f8;
+}
+
+.hack-preview-fallback {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 32px;
+  text-align: center;
+  color: var(--foc-color-text-muted, #3e5876);
+}
+
+.hack-reg-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid rgba(27, 167, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(27, 167, 255, 0.08);
+  color: #0b6fad;
+  font-family: var(--foc-font-sans, "Inter", system-ui, sans-serif);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hack-reg-toggle span {
+  min-width: 18px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--foc-color-primary, #1ba7ff);
+  color: #fff;
+  font-size: 11px;
+  text-align: center;
+}
+
+.hack-reg-toggle svg {
+  transition: transform 0.35s ease;
+}
+
+.hack-reg-toggle.is-open {
+  background: var(--foc-color-primary, #1ba7ff);
+  border-color: var(--foc-color-primary, #1ba7ff);
+  color: #fff;
+}
+
+.hack-reg-toggle.is-open span {
+  background: #fff;
+  color: #0b6fad;
+}
+
+.hack-reg-toggle.is-open svg {
+  transform: rotate(180deg);
+}
+
+.hack-reg-members-row td {
+  padding: 0 16px;
+  background: var(--foc-color-bg-alt, #eaf4ff);
+  border-bottom: 0;
+}
+
+.hack-reg-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s ease;
+}
+
+.hack-reg-collapse.is-open {
+  grid-template-rows: 1fr;
+}
+
+.hack-reg-collapse-inner {
+  overflow: hidden;
+}
+
+.hack-reg-collapse.is-open .hack-reg-collapse-inner {
+  position: sticky;
+  left: 16px;
+  width: calc(100cqw - 32px);
+  padding: 4px 0 16px;
+}
+
+.hack-reg-members {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border: 1px solid var(--foc-color-border, rgba(4, 25, 45, 0.12));
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.hack-reg-members th,
+.hack-reg-members td {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 13.5px;
+  border-bottom: 1px solid #e7eef6;
+}
+
+.hack-reg-members th {
+  background: #f7fbff;
+  color: var(--foc-color-text-muted, #3e5876);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hack-reg-members tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.hack-reg-leader {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(27, 167, 255, 0.14);
+  color: #0b6fad;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hack-reg-collapse,
+  .hack-reg-toggle svg {
+    transition: none;
   }
 }
