@@ -37,4 +37,6 @@ const hackathonSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+hackathonSchema.index({ 'members.mobile': 1 });
+
 module.exports = mongoose.model('Hackathon', hackathonSchema);

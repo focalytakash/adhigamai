@@ -114,6 +114,13 @@
   font-size: 13px;
   font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.hackathon-guide-link:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .hackathon-guide-link:hover {

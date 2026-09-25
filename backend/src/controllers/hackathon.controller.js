@@ -153,6 +153,26 @@ const createRegistration = asyncHandler(async (req, res) => {
     if (!/^[0-9]+$/.test(member.roll)) throw new AppError(`Enter a numeric roll number for member ${i + 1}.`, 400);
   });
 
+  const mobiles = members.map((member) => member.mobile);
+  const duplicateInTeam = mobiles.find((mobile, index) => mobiles.indexOf(mobile) !== index);
+  if (duplicateInTeam) {
+    throw new AppError(`Mobile number ${duplicateInTeam} is used more than once in this team.`, 400);
+  }
+
+  const existingMobile = await Hackathon.findOne({
+    'members.mobile': { $in: mobiles },
+  })
+    .select('teamId members.name members.mobile')
+    .lean();
+
+  if (existingMobile) {
+    const matched = (existingMobile.members || []).find((member) => mobiles.includes(member.mobile));
+    throw new AppError(
+      `Mobile number ${matched?.mobile || ''} is already registered with team ${existingMobile.teamId}.`,
+      400
+    );
+  }
+
   const teamId = await uniqueTeamId(teamName);
 
   const registration = await Hackathon.create({

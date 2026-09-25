@@ -122,6 +122,19 @@ const Hackathon = () => {
         if (!EMAIL_RE.test(member.email.trim())) next[`member-${i}-email`] = "Enter a valid email.";
         if (!/^[0-9]+$/.test(member.roll.trim())) next[`member-${i}-roll`] = "Enter a numeric roll number.";
       });
+
+      const mobileCounts = members.reduce((acc, member) => {
+        const mobile = member.mobile.trim();
+        if (MOBILE_RE.test(mobile)) acc[mobile] = (acc[mobile] || 0) + 1;
+        return acc;
+      }, {});
+
+      members.forEach((member, i) => {
+        const mobile = member.mobile.trim();
+        if (MOBILE_RE.test(mobile) && mobileCounts[mobile] > 1) {
+          next[`member-${i}-mobile`] = "This mobile number is already used in the team.";
+        }
+      });
     }
 
     if (n === 3) {

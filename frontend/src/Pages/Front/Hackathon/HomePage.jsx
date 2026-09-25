@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import axios from "axios";
-import { ChevronDown, FileText, MessageCircle } from "lucide-react";
+import { ChevronDown, Download, FileText, MessageCircle } from "lucide-react";
 import siteConfig from "../../../config/siteConfig";
 import "./Hackathon.css";
 
@@ -10,9 +10,124 @@ const HomePage = () => {
   const [teams, setTeams] = useState([]);
   const [status, setStatus] = useState("loading");
   const [openTeams, setOpenTeams] = useState({});
+  const [downloading, setDownloading] = useState(false);
 
   const toggleTeam = (teamId) => {
     setOpenTeams((current) => ({ ...current, [teamId]: !current[teamId] }));
+  };
+
+  const downloadExcel = async () => {
+    if (!teams.length || downloading) return;
+
+    setDownloading(true);
+    try {
+      const XLSX = await import("xlsx");
+      const maxOtherMembers = Math.max(
+        0,
+        ...teams.map((team) => {
+          const members = team.members || [];
+          const others = members.filter((m) => !m.isLeader);
+          // If no leader flagged, first person is treated as leader
+          return members.some((m) => m.isLeader) ? others.length : Math.max(0, members.length - 1);
+        })
+      );
+
+      const memberCols = [];
+      for (let i = 1; i <= maxOtherMembers; i += 1) {
+        memberCols.push(
+          `Member ${i} Name`,
+          `Member ${i} Email`,
+          `Member ${i} Contact`,
+          `Member ${i} Roll No`
+        );
+      }
+
+      const headers = [
+        "Team ID",
+        "Team Name",
+        "College",
+        "Course",
+        "Year",
+        "Category",
+        "Problem Statement",
+        "Problem Code",
+        "Problem Description",
+        "Leader Name",
+        "Leader Email",
+        "Leader Contact",
+        "Leader Roll No",
+        ...memberCols,
+        "Registered At",
+      ];
+
+      const formatRegisteredAt = (value) => {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleString("en-IN", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      };
+
+      const rows = [headers];
+      teams.forEach((team) => {
+        const members = team.members?.length ? [...team.members] : [];
+        const leader =
+          members.find((m) => m.isLeader) || members[0] || {};
+        const others = members.filter((m) => m !== leader);
+
+        const memberValues = [];
+        for (let i = 0; i < maxOtherMembers; i += 1) {
+          const member = others[i] || {};
+          memberValues.push(
+            member.name || "",
+            member.email || "",
+            member.mobile || "",
+            member.roll || ""
+          );
+        }
+
+        rows.push([
+          team.teamId || "",
+          team.teamName || "",
+          team.collegeName || "",
+          team.course || "",
+          team.yearOfStudy || "",
+          team.category || "",
+          team.problemStatement || "",
+          team.problemCode || "",
+          team.problemDesc || "",
+          leader.name || team.leaderName || "",
+          leader.email || "",
+          leader.mobile || "",
+          leader.roll || "",
+          ...memberValues,
+          formatRegisteredAt(team.registeredAt || team.createdAt),
+        ]);
+      });
+
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      worksheet["!cols"] = headers.map((header) => ({
+        wch: Math.min(Math.max(header.length + 2, 14), 40),
+      }));
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Registrations");
+      XLSX.writeFile(
+        workbook,
+        `hackathon-registrations-${new Date().toISOString().split("T")[0]}.xlsx`
+      );
+    } catch (error) {
+      console.error("Excel download failed:", error);
+      alert("Failed to download Excel file. Please try again.");
+    } finally {
+      setDownloading(false);
+    }
   };
 
   useEffect(() => {
@@ -74,6 +189,17 @@ const HomePage = () => {
                 <MessageCircle size={16} />
                 Join WhatsApp group
               </a>
+            ) : null}
+            {status === "ready" && teams.length > 0 ? (
+              <button
+                type="button"
+                className="hackathon-guide-link is-light"
+                onClick={downloadExcel}
+                disabled={downloading}
+              >
+                <Download size={16} />
+                {downloading ? "Preparing…" : "Download Excel"}
+              </button>
             ) : null}
           </div>
         </header>
