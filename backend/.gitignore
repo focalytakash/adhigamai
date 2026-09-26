@@ -6,4 +6,3 @@ npm-debug.log*
 uploads/
 service-account.json
 src/service-account.json
-**/service-account*.json
