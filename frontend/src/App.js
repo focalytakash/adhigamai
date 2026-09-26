@@ -88,7 +88,7 @@ const Layout = () => {
         <Route exact path="/contact" element={<Contact />} />
         <Route exact path="/cmp/login" element={<CompanyLogin />} />
         <Route path="/events" element={<Event />} />
-        <Route path="/hackathon" element={<HackathonHome />} />
+        <Route path="/hackathonreg" element={<HackathonHome />} />
         <Route path="/hackathon/register" element={<Hackathon />} />
 
         {/* Candidate Parent Route */}

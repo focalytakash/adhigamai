@@ -3,6 +3,7 @@ const HackathonQuery = require('../models/hackathonQuery.model');
 const asyncHandler = require('../middleware/asyncHandler');
 const apiResponse = require('../utils/apiResponse');
 const AppError = require('../utils/appError');
+const { appendHackathonRegistration } = require('../services/googleSheets.service');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MOBILE_RE = /^[0-9]{10}$/;
@@ -193,6 +194,17 @@ const createRegistration = asyncHandler(async (req, res) => {
       participateAllRounds: true,
     },
   });
+
+  try {
+    await appendHackathonRegistration(registration);
+    console.log('[googleSheets] Synced registration', registration.teamId);
+  } catch (sheetError) {
+    console.error(
+      '[googleSheets] Failed to sync registration:',
+      sheetError?.message || sheetError,
+      sheetError?.errors || sheetError?.response?.data || ''
+    );
+  }
 
   return apiResponse.success(res, {
     status: 201,
